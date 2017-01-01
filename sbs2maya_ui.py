@@ -87,13 +87,24 @@ def ui_main():
 	setParent('..')
 	
 	# detected (good to go) obj list
-	text(l= ' - Ready For Process Check', h= 20)
+	hide_row = rowLayout(nc= 3, adj= 1)
+	text(l= ' + Hide UDIM Texture', al= 'left', h= 20)
+	columnLayout()
+	cmC= columnLayout()
+	hide_mqsb = mqsb.SwitchBox(onl= 'Hide', ofl= 'Show All', w= 160, h= 20, v= True, p= cmC)
+	setParent('..')
+	setParent('..')
+	text(l= '', w= 18)
+	setParent('..')
+
 	rowLayout(nc= 3, adj= 2)
 	text(l= '', w= 1)
 	checkTexture_btn = button(l= 'Check Texture File', h= 30)
 	text(l= '', w= 1)
 	setParent('..')
+	
 	text(l= '', h= 2)
+	
 	rowLayout(nc= 3, adj= 2)
 	text(l= '', w= 1)
 	checkResult_txsc = textScrollList(ams= 1, h= 120)
@@ -113,8 +124,8 @@ def ui_main():
 	rowLayout(nc= 3, adj= 1)
 	text(l= '  - Convert Selected Only', al= 'left', h= 20)
 	columnLayout()
-	cmC= columnLayout()
-	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 160, h= 20, v= False, p= cmC)
+	cmD= columnLayout()
+	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 160, h= 20, v= False, p= cmD)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 18)
@@ -123,8 +134,8 @@ def ui_main():
 	rowLayout(nc= 3, adj= 1)
 	text(l= '  - Build VRay Shader', al= 'left', h= 20)
 	columnLayout()
-	cmD= columnLayout()
-	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 160, h= 20, v= True, p= cmD)
+	cmE= columnLayout()
+	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 160, h= 20, v= True, p= cmE)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 18)
@@ -156,8 +167,10 @@ def ui_main():
 	def udim_mqsb_switch(status, *args):
 		if status:
 			row_Pattern.columnWidth([3, 78])
+			hide_row.setEnable(0)
 		else:
 			row_Pattern.columnWidth([3, 1])
+			hide_row.setEnable(1)
 
 	udim_mqsb.onCmd = partial(udim_mqsb_switch, 1)
 	udim_mqsb.offCmd = partial(udim_mqsb_switch, 0)
@@ -222,6 +235,8 @@ def ui_main():
 			typeName = fileName.split(sepTYPE)[-1]
 			itemName = fileName[:-(len(typeName) + 1)]
 			udimCode = itemName.split(sepUDIM)[-1] if isUDIM else ''
+			if not isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
+				continue
 			if not itemName_currentMatch and not itemName == itemName_currentMatch:
 				if len(pathTmp) > 0 and len(pathTmp) < 6:
 					pathTmp = []
