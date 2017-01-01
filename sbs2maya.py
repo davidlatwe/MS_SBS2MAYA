@@ -1,28 +1,28 @@
+# -*- coding:utf-8 -*-
+'''
+Created on 2016.12.30
 
+@author: davidpower
+'''
 from pymel.core import *
 from subprocess import Popen, PIPE
 from shutil import copyfile
 import os
-import mQtGui.muiSwitchBox as mqsb; reload(mqsb)
-import mQtGui.mGetQt as mqt; reload(mqt)
-
-inputDir = 'P:\\Temp\\AK'
-textureName = ''
-outputFormat= 'png'
 
 
-def sbsrender_cmd(inputDir, textureName, outputFormat):
+sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer\\5\\bin64\\sbsrender.exe'
+sbsarFile = 'P:\\Temp\\AK\\PBR_SBS2VRay.sbsar'
+sbsarGraph = 'Converter'
+
+
+def sbsrender_cmd(inputDir, textureName, texturePath, outputFormat):
 	"""
 	"""
 	outputDir = inputDir + os.sep + 'converted'
-	outputName = textureName + '_{outputNodeName}'
-	input_baseColor = inputDir + os.sep + textureName + '.albedo.' + outputFormat
-	input_roughness = inputDir + os.sep + textureName + '.roughness.' + outputFormat
-	input_metallic = inputDir + os.sep + textureName + '.metalness.' + outputFormat
-
-	sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer\\5\\bin64\\sbsrender.exe'
-	sbsarFile = 'P:\\Temp\\AK\\PBR_SBS2VRay.sbsar'
-	sbsarGraph = 'Converter'
+	outputName = textureName + '{outputNodeName}'
+	input_baseColor = texturePath[0]
+	input_roughness = texturePath[3]
+	input_metallic = texturePath[1]
 
 	if not os.path.exists(sbsrenderPath):
 		error('sbsrender was not found in this path: ' + sbsrenderPath)
@@ -56,6 +56,26 @@ def sbsrender_exec(cmd, outputDir):
 
 	def sbsrender_error(msg):
 		"""
+		sbsrender.exe output msg Example:
+
+		1) Sucess
+		---	* convertResult:
+		Results from graph "pkg://Converter" into package "P:/Temp/AK/PBR_SBS2VRay.sbsar":
+		* Output "diffuse" saved to: "P:/Temp/AK/converted/aaa_diffuse.png"
+		* Output "reflection" saved to: "P:/Temp/AK/converted/aaa_reflection.png"
+		* Output "glossiness" saved to: "P:/Temp/AK/converted/aaa_glossiness.png"
+		* Output "ior" saved to: "P:/Temp/AK/converted/aaa_ior.png"
+		---	* convertError: (None)
+		
+		2) Failed
+		--- * convertResult:
+		Results from graph "pkg://Converter" into package "P:/Temp/AK/PBR_SBS2VRay.sbsar":
+		---	* convertError:
+		Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_diffuse.png
+		Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_reflection.png
+		Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_glossiness.png
+		Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_ior.png
+
 		"""
 		print '\n+++'
 		print convertResult
@@ -96,32 +116,38 @@ def sbsrender_exec(cmd, outputDir):
 		return None
 
 
-def sbs2maya_core(inputDir, textureName, outputFormat, isUDIM):
+def sbs2maya_convert(inputDir, textureName, texturePath, outputFormat):
 	"""
 	"""
 	# Convert SBS map
-	cmd, outputDir = sbsrender_cmd(inputDir, textureName, outputFormat)
+	cmd, outputDir = sbsrender_cmd(inputDir, textureName, texturePath, outputFormat)
 	if cmd and outputDir:
 		optPathDict = sbsrender_exec(cmd, outputDir)
 	else:
 		return None
 
 	# Copy normal map
-	src_normalMap = inputDir + textureName + ''
-	dst_normalMap = outputDir + os.sep + textureName + ''
+	src_normalMap = texturePath[2]
+	dst_normalMap = outputDir + os.sep + os.path.basename(texturePath[2])
 	copyfile(src_normalMap, dst_normalMap)
 	optPathDict['normal'] = [4, dst_normalMap]
 
+	return optPathDict
+
+
+def buildShadingNetwork(optPathDict, itemName, isUDIM):
+	"""
+	"""
 	shadingNodesList = []
 	sbsvmtlNodesList = []
 
 	# Build and setup shading network
-	mainShd, mainShdSG = createShader('VRayBlendMtl', textureName + '_SBSvmtl')
-	baseShd, noneShdSG = createShader('VRayMtl', textureName + '_baseMtl', noSG= True)
-	specShd, noneShdSG = createShader('VRayMtl', textureName + '_specMtl', noSG= True)
+	mainShd, mainShdSG = mShading.createShader('VRayBlendMtl', itemName + '_SBSvmtl')
+	baseShd, noneShdSG = mShading.createShader('VRayMtl', itemName + '_baseMtl', noSG= True)
+	specShd, noneShdSG = mShading.createShader('VRayMtl', itemName + '_specMtl', noSG= True)
 
-	sbsvmtlNodesList.append(mainShd, mainShdSG)
-	shadingNodesList.append(baseShd, specShd)
+	sbsvmtlNodesList.extend([mainShd, mainShdSG])
+	shadingNodesList.extend([baseShd, specShd])
 
 	baseShd.outColor.connect(mainShd.base_material)
 	specShd.outColor.connect(mainShd.coat_material_0)
@@ -135,14 +161,14 @@ def sbs2maya_core(inputDir, textureName, outputFormat, isUDIM):
 	specShd.bumpMapType.set(1)
 
 	# Create and setup textures nodes
-	difTex, difPlc = createFileTexture(textureNode_name, place2dNode_name)
-	refTex, refPlc = createFileTexture(textureNode_name, place2dNode_name)
-	gloTex, gloPlc = createFileTexture(textureNode_name, place2dNode_name)
-	iorTex, iorPlc = createFileTexture(textureNode_name, place2dNode_name)
-	norTex, norPlc = createFileTexture(textureNode_name, place2dNode_name)
+	difTex, difPlc = mShading.createFileTexture(itemName + '_diffuse_file', itemName + '_diffuse_p2d')
+	refTex, refPlc = mShading.createFileTexture(itemName + '_reflection_file', itemName + '_reflection_p2d')
+	gloTex, gloPlc = mShading.createFileTexture(itemName + '_glossiness_file', itemName + '_glossiness_p2d')
+	iorTex, iorPlc = mShading.createFileTexture(itemName + '_ior_file', itemName + '_ior_p2d')
+	norTex, norPlc = mShading.createFileTexture(itemName + '_normal_file', itemName + '_normal_p2d')
 	
-	shadingNodesList.append(
-		difTex, difPlc,	refTex, refPlc,	gloTex, gloPlc, iorTex, iorPlc, norTex, norPlc)
+	shadingNodesList.extend(
+		[difTex, difPlc, refTex, refPlc, gloTex, gloPlc, iorTex, iorPlc, norTex, norPlc])
 
 	difTex.outColor.connect(baseShd.diffuseColor)
 	refTex.outColor.connect(specShd.reflectionColor)
@@ -157,74 +183,24 @@ def sbs2maya_core(inputDir, textureName, outputFormat, isUDIM):
 		tex.fileTextureName.set(optPathDict[channel][1])
 		tex.filterType.set(0)
 		tex.uvTilingMode.set(3 if isUDIM else 0)
-		setVrayTextureFilter(tex, 1)
-		setVrayTextureGamma(tex, 2 if tex in [difTex, refTex] else 0)
+		mVRay.setVrayTextureFilter(tex, 1)
+		mVRay.setVrayTextureGamma(tex, 2 if tex in [difTex, refTex] else 0)
 
-	dumpToBin(sbsvmtlNodesList, 'SBS_main')
-	dumpToBin(shadingNodesList, 'SBS_element')
-
-
-def batch():
-	pass
+	mShading.dumpToBin(sbsvmtlNodesList, 'SBS_main')
+	mShading.dumpToBin(shadingNodesList, 'SBS_element')
 
 
-def sbs2maya_ui():
-	
-	windowName = 'ms_sbs2maya_mainUI'
-	windowWidth = 250
-
-	if window(windowName, q= 1, ex= 1):
-		deleteUI(windowName)
-
-	window(windowName, t= 'SBS 2 MAYA', s= 0, mxb= 0, mnb= 0)
-	main_column = columnLayout(adj= 1, cal= 'left')
-	
-	#main_form = formLayout()
-
-	bannerArea = columnLayout(adj= 1)
-	bannerTxt = text(l= 'SBS2MAYA', w= windowWidth)
-	QBannerTxt = mqt.convert(bannerTxt)
-	QBannerTxt.setStyleSheet('QObject {font: bold 42px; color: #222222;}')
-	setParent('..')
-
-	text('  - Texture Folder Path')
-
-	rowLayout(nc= 2, adj= 1)
-	textField()
-	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
-	setParent('..')
-	
-	rowLayout(nc= 3, adj= 1, cl2= ['left', 'left'])
-	
-	columnLayout()
-	text(' + Walk Subfolders', h= 20)
-	cmA= columnLayout()
-	walk_mqsb = mqsb.SwitchBox(onl= 'WALK', ofl= 'NO', w= 120, h= 25, v= False, p= cmA)
-	setParent('..')
-	setParent('..')
-	
-	columnLayout()
-	text(' + UDIM UV Tilling', h= 20)
-	cmB= columnLayout()
-	udim_mqsb = mqsb.SwitchBox(onl= 'UDIM', ofl= 'NO', w= 120, h= 25, v= False, p= cmB)
-	setParent('..')
-	setParent('..')
-	text('', w= 10)
-	setParent('..')
-	
-	text(' + Input Filename Pattern', h= 20)
-	rowLayout(nc= 7)
-	button('NAME', h= 20, w= 42)
-	button('_', w= 16, h= 20)
-	button('UDIM', h= 20, w= 42)
-	button('.', w= 16, h= 20)
-	button('TYPE', h= 20, w= 42)
-	button('.', w= 16, h= 20)
-	optionMenu(h= 20)
-	menuItem('png')
-	setParent('..')
-	# file name format objName._udim._type.format
-	# detected (good to go) obj list
-
-	window(windowName, e= 1, w= windowWidth, h= 400)
-	showWindow(windowName)
+def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad):
+	"""
+	"""
+	shadedItem = []
+	for texture in textureInputSet:
+		inputDir = textureInputSet[texture][0]
+		textureName = texture + sepTYPE
+		texturePath = textureInputSet[texture][2:]
+		outputFormat = textureInputSet[texture][1] if not outputFormat else outputFormat
+		optPathDict = sbs2maya_convert(inputDir, textureName, texturePath, outputFormat)
+		itemName = texture[:-5] if isUDIM else texture
+		if not itemName in shadedItem and buildShad:
+			buildShadingNetwork(optPathDict, itemName, isUDIM)
+		shadedItem.append(itemName)

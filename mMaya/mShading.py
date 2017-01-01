@@ -1,6 +1,10 @@
+# -*- coding:utf-8 -*-
+'''
+Created on 2016.12.30
 
+@author: davidpower
+'''
 from pymel.core import *
-
 
 
 def createShader(shaderType, shaderNode_name, noSG= None):
@@ -41,20 +45,6 @@ def createFileTexture(textureNode_name, place2dNode_name):
 	place2dNode.outUvFilterSize.connect(textureNode.uvFilterSize, f= 1)
 
 	return textureNode, place2dNode
-
-
-def setVrayTextureFilter(textureNode, filterType):
-	"""
-	"""
-	mel.eval('vray addAttributesFromGroup "' + textureNode + '" vray_texture_filter 1;')
-	cmds.setAttr(textureNode + '.vrayTextureSmoothType', filterType)
-
-
-def setVrayTextureGamma(textureNode, colorspace):
-	"""
-	"""
-	mel.eval('vray addAttributesFromGroup "' + textureNode + '" vray_file_gamma 1;')
-	cmds.setAttr(textureNode + '.vrayFileColorSpace', colorspace)
 
 
 def dumpToBin(shadingNodes, binName):

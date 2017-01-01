@@ -22,9 +22,9 @@ class SwitchBox(QtGui.QCheckBox):
 		self.h = kwargs['h'] if 'h' in kwargs else self.baseH
 		''' ARGS: COLOR '''
 		# switch color
-		self.btnBG = kwargs['btnbg'] if 'btnbg' in kwargs else [93, 93, 93]
-		self.onBG = kwargs['onbg'] if 'onbg' in kwargs else [66, 130, 158]
-		self.offBG = kwargs['ofbg'] if 'ofbg' in kwargs else [153, 81, 79]
+		self.btnBG = kwargs['btnbg'] if 'btnbg' in kwargs else [150, 150, 150]
+		self.onBG = kwargs['onbg'] if 'onbg' in kwargs else [55, 116, 116]
+		self.offBG = kwargs['ofbg'] if 'ofbg' in kwargs else [148, 97, 79]
 		''' ARGS: STATE '''
 		# switch state text
 		self.onLabel = kwargs['onl'] if 'onl' in kwargs else ''
@@ -119,7 +119,7 @@ class SwitchBox(QtGui.QCheckBox):
 			onBG = [v * 0.7 for v in self.onBG]
 			offBG = [v * 0.7 for v in self.offBG]
 			btnBG = [v * 0.7 for v in self.btnBG]
-		btnBG = QtGui.QColor(btnBG[0], btnBG[1], btnBG[2])
+		btnBG = QtGui.QColor(btnBG[0], btnBG[1], btnBG[2], 160)
 		onBG = QtGui.QColor(onBG[0], onBG[1], onBG[2])
 		offBG = QtGui.QColor(offBG[0], offBG[1], offBG[2])
 		# change the look for on/off
