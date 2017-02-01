@@ -2,7 +2,7 @@ from maya.OpenMayaUI import MQtUtil
 from shiboken import wrapInstance
 import PySide.QtGui as QtGui
 import PySide.QtCore as QtCore
-import mQtGui.mGetQt as mqt; reload(mqt)
+import mGetQt as mqt; reload(mqt)
 
 class SwitchBox(QtGui.QCheckBox):
 

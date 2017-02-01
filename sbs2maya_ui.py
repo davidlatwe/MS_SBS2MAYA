@@ -14,8 +14,11 @@ import sbs2maya; reload(sbs2maya)
 
 
 ext_list = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
-sbs_type = ['albedo', 'metalness', 'normal', 'roughness']
-
+sbs_typeA = ['albedo', 'metalness', 'normal', 'roughness']
+sbs_typeB = ['BaseColor', 'Metallic', 'Normal', 'Roughness']
+sbs_typeC = ['BaseColor', 'Metalness', 'Normal', 'Roughness']
+global sbs_type
+sbs_type = []
 
 
 def ui_main():
@@ -44,6 +47,34 @@ def ui_main():
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
 	
+	rowLayout(nc= 4)
+	sbsConType = radioCollection()
+	radioButton ('rad_A', l= 'albedo')
+	radioButton ('rad_B', l= 'Metallic')
+	radioButton ('rad_C', l= 'Metalness')
+	setParent('..')
+
+	def rad_ccmd(*args):
+		global sbs_type
+		st = sbsConType.getSelect()
+		if st.endswith('A'):
+			sbs_type = sbs_typeA
+		if st.endswith('B'):
+			sbs_type = sbs_typeB
+		if st.endswith('C'):
+			sbs_type = sbs_typeC
+
+	radioButton ('rad_A', e= 1, cc= rad_ccmd)
+	radioButton ('rad_B', e= 1, cc= rad_ccmd)
+	radioButton ('rad_C', e= 1, cc= rad_ccmd)
+
+	text(l= '  - Output Folder Path')
+
+	rowLayout(nc= 2, adj= 1)
+	outputDir_textF = textField(text= '')
+	ocBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
+	setParent('..')
+
 	rowLayout(nc= 3, adj= 1, cl2= ['left', 'left'])
 	
 	columnLayout()
@@ -91,7 +122,7 @@ def ui_main():
 	text(l= ' + Hide UDIM Texture', al= 'left', h= 20)
 	columnLayout()
 	cmC= columnLayout()
-	hide_mqsb = mqsb.SwitchBox(onl= 'Hide', ofl= 'Show All', w= 160, h= 20, v= True, p= cmC)
+	hide_mqsb = mqsb.SwitchBox(onl= 'Hide', ofl= 'Show All', w= 160, h= 20, v= False, p= cmC)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 18)
@@ -163,6 +194,17 @@ def ui_main():
 				inputDir_textF.setText(result[0])
 
 	icBtn_textF_choose.setCommand(partial(openTextureFolder))
+
+	def openOutputFolder(*args):
+		textureDir = inputDir_textF.getText()
+		if not textureDir:
+			textureDir = workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1)
+		if os.path.exists(textureDir):
+			result = fileDialog2(cap= 'Select Output Folder', fm= 3, okc= 'Select', dir= textureDir)
+			if result:
+				outputDir_textF.setText(result[0])
+
+	ocBtn_textF_choose.setCommand(partial(openOutputFolder))
 
 	def udim_mqsb_switch(status, *args):
 		if status:
@@ -262,6 +304,7 @@ def ui_main():
 		isUDIM = udim_mqsb.isChecked()
 		sepTYPE = sepTYPE_btn.getLabel()
 		buildShad = shad_mqsb.isChecked()
+		outputDir = os.path.abspath(outputDir_textF.getText())
 		if selt_mqsb.isChecked():
 			selectedItem = checkResult_txsc.getSelectItem()
 			allItems = checkResult_txsc.getAllItems()
@@ -269,7 +312,7 @@ def ui_main():
 				if not item in selectedItem:
 					textureInputSet.pop(item, None)
 		if textureInputSet:
-			sbs2maya.dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad)
+			sbs2maya.dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 

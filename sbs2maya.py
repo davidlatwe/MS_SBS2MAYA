@@ -7,18 +7,22 @@ Created on 2016.12.30
 from pymel.core import *
 from subprocess import Popen, PIPE
 from shutil import copyfile
+import mMaya; reload(mMaya)
+import mMaya.mShading as mShading; reload(mShading)
+import mMaya.mVRay as mVRay; reload(mVRay)
 import os
 
 
-sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer\\5\\bin64\\sbsrender.exe'
-sbsarFile = 'P:\\Temp\\AK\\PBR_SBS2VRay.sbsar'
+sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer 5\\sbsrender.exe'
+#sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer\\5\\bin64\\sbsrender.exe'
+sbsarFile = 'T:\\Script\\Maya\\tools\\MS_SBS2MAYA\\sbsarLib\\PBR_SBS2VRay.sbsar'
 sbsarGraph = 'Converter'
 
 
-def sbsrender_cmd(inputDir, textureName, texturePath, outputFormat):
+def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat):
 	"""
 	"""
-	outputDir = inputDir + os.sep + 'converted'
+	outputDir = '{inputPath}' + os.sep + 'converted' if not outputDir else outputDir
 	outputName = textureName + '{outputNodeName}'
 	input_baseColor = texturePath[0]
 	input_roughness = texturePath[3]
@@ -116,19 +120,23 @@ def sbsrender_exec(cmd, outputDir):
 		return None
 
 
-def sbs2maya_convert(inputDir, textureName, texturePath, outputFormat):
+def sbs2maya_convert(outputDir, textureName, texturePath, outputFormat):
 	"""
 	"""
 	# Convert SBS map
-	cmd, outputDir = sbsrender_cmd(inputDir, textureName, texturePath, outputFormat)
+	cmd, outputDir = sbsrender_cmd(outputDir, textureName, texturePath, outputFormat)
 	if cmd and outputDir:
 		optPathDict = sbsrender_exec(cmd, outputDir)
 	else:
 		return None
 
 	# Copy normal map
-	src_normalMap = texturePath[2]
-	dst_normalMap = outputDir + os.sep + os.path.basename(texturePath[2])
+	index = 0
+	for i, tp in enumerate(texturePath):
+		if 'normal' in os.path.basename(tp).lower():
+			index = i
+	src_normalMap = texturePath[index]
+	dst_normalMap = outputDir + os.sep + os.path.basename(texturePath[index])
 	copyfile(src_normalMap, dst_normalMap)
 	optPathDict['normal'] = [4, dst_normalMap]
 
@@ -154,8 +162,9 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 
 	mainShd.additive_mode.set(1)
 	mainShd.blend_amount_0.set([1, 1, 1])
-	baseShd.color.set([0, 0, 0])
 	baseShd.bumpMapType.set(1)
+	specShd.color.set([0, 0, 0])
+	specShd.diffuseColorAmount.set(0)
 	specShd.brdfType.set(3)
 	specShd.lockFresnelIORToRefractionIOR.set(0)
 	specShd.bumpMapType.set(1)
@@ -190,7 +199,7 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 	mShading.dumpToBin(shadingNodesList, 'SBS_element')
 
 
-def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad):
+def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad, outputDir):
 	"""
 	"""
 	shadedItem = []
@@ -199,7 +208,7 @@ def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad):
 		textureName = texture + sepTYPE
 		texturePath = textureInputSet[texture][2:]
 		outputFormat = textureInputSet[texture][1] if not outputFormat else outputFormat
-		optPathDict = sbs2maya_convert(inputDir, textureName, texturePath, outputFormat)
+		optPathDict = sbs2maya_convert(outputDir, textureName, texturePath, outputFormat)
 		itemName = texture[:-5] if isUDIM else texture
 		if not itemName in shadedItem and buildShad:
 			buildShadingNetwork(optPathDict, itemName, isUDIM)
