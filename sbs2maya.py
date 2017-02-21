@@ -9,6 +9,7 @@ from subprocess import Popen, PIPE
 from shutil import copyfile
 import mMaya; reload(mMaya)
 import mMaya.mShading as mShading; reload(mShading)
+import mMaya.mTexture as mTexture; reload(mTexture)
 import mMaya.mVRay as mVRay; reload(mVRay)
 import os
 
@@ -19,7 +20,7 @@ sbsarFile = 'T:\\Script\\Maya\\tools\\MS_SBS2MAYA\\sbsarLib\\PBR_SBS2VRay.sbsar'
 sbsarGraph = 'Converter'
 
 
-def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat):
+def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
 	outputDir = '{inputPath}' + os.sep + 'converted' if not outputDir else outputDir
@@ -35,6 +36,16 @@ def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat):
 		error('sbsar file was not found in this path: ' + sbsarFile)
 		return None
 
+	if outputSize:
+		outputSize = str(len(bin(int(outputSize))[3:]))
+	else:
+		inputsize = mTexture.getTextureRes(input_baseColor)
+		if inputsize is None:
+			error('Can not query texture file resolution: ' + input_baseColor)
+			return None
+		else:
+			outputSize = str(len(bin(int(inputsize[0]))[3:]))
+
 	cmd = '"%s" render ' % sbsrenderPath \
 		+ '--inputs "%s" ' % sbsarFile \
 		+ '--input-graph "%s" ' % sbsarGraph \
@@ -43,7 +54,9 @@ def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat):
 		+ '--set-entry input_metallic@"%s" ' % input_metallic \
 		+ '--output-path "%s" ' % outputDir \
 		+ '--output-name "%s" ' % outputName \
-		+ '--output-format "%s" ' % outputFormat
+		+ '--output-format "%s" ' % outputFormat \
+		+ '--engine "d3d10pc" ' \
+		+ '--set-value $outputsize@' + outputSize + ',' + outputSize
 
 	return cmd, outputDir
 
@@ -120,11 +133,11 @@ def sbsrender_exec(cmd, outputDir):
 		return None
 
 
-def sbs2maya_convert(outputDir, textureName, texturePath, outputFormat):
+def sbs2maya_convert(outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
 	# Convert SBS map
-	cmd, outputDir = sbsrender_cmd(outputDir, textureName, texturePath, outputFormat)
+	cmd, outputDir = sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize)
 	if cmd and outputDir:
 		optPathDict = sbsrender_exec(cmd, outputDir)
 	else:
@@ -137,7 +150,11 @@ def sbs2maya_convert(outputDir, textureName, texturePath, outputFormat):
 			index = i
 	src_normalMap = texturePath[index]
 	dst_normalMap = outputDir + os.sep + os.path.basename(texturePath[index])
-	copyfile(src_normalMap, dst_normalMap)
+	if outputSize:
+		outputSize = int(outputSize)
+		mTexture.resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
+	else:
+		copyfile(src_normalMap, dst_normalMap)
 	optPathDict['normal'] = [4, dst_normalMap]
 
 	return optPathDict
@@ -199,7 +216,7 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 	mShading.dumpToBin(shadingNodesList, 'SBS_element')
 
 
-def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad, outputDir):
+def dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
 	"""
 	"""
 	shadedItem = []
@@ -208,8 +225,18 @@ def dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad, outputDir):
 		textureName = texture + sepTYPE
 		texturePath = textureInputSet[texture][2:]
 		outputFormat = textureInputSet[texture][1] if not outputFormat else outputFormat
-		optPathDict = sbs2maya_convert(outputDir, textureName, texturePath, outputFormat)
+		optPathDict = sbs2maya_convert(outputDir, textureName, texturePath, outputFormat, outputSize)
 		itemName = texture[:-5] if isUDIM else texture
-		if not itemName in shadedItem and buildShad:
+		# check V-Ray is loaded or not
+		if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
+			try:
+				loadPlugin('vrayformaya', qt= 1)
+			except Exception, e:
+				warning('---------------------')
+				print e
+				error('Failed to load V-Ray.')
+				buildShad = False
+		# build shad
+		if not itemName in shadedItem and buildShad and optPathDict is not None:
 			buildShadingNetwork(optPathDict, itemName, isUDIM)
 		shadedItem.append(itemName)

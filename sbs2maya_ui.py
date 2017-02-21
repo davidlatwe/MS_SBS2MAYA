@@ -14,6 +14,7 @@ import sbs2maya; reload(sbs2maya)
 
 
 ext_list = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
+siz_list = ['64', '128', '256', '512', '1024', '2048', '4096', '8192']
 sbs_typeA = ['albedo', 'metalness', 'normal', 'roughness']
 sbs_typeB = ['BaseColor', 'Metallic', 'Normal', 'Roughness']
 sbs_typeC = ['BaseColor', 'Metalness', 'Normal', 'Roughness']
@@ -29,7 +30,7 @@ def ui_main():
 	if window(windowName, q= 1, ex= 1):
 		deleteUI(windowName)
 
-	window(windowName, t= 'SBS 2 MAYA - v1.0 Beta', s= 0, mxb= 0, mnb= 0)
+	window(windowName, t= 'SBS 2 MAYA - v1.1 Beta', s= 0, mxb= 0, mnb= 0)
 	main_column = columnLayout(adj= 1, cal= 'left')
 	
 	#main_form = formLayout()
@@ -43,7 +44,8 @@ def ui_main():
 	text(l= '  - Texture Folder Path')
 
 	rowLayout(nc= 2, adj= 1)
-	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
+	#inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
+	inputDir_textF = textField(text= 'C:/Users/David/Desktop/jetTest/ddo')
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
 	
@@ -149,6 +151,15 @@ def ui_main():
 	menuItem('{ As is }')
 	for ext in ext_list:
 		menuItem(ext)
+	text(l= '', w= 20)
+	setParent('..')
+
+	rowLayout(nc= 3, adj= 1, h= 30)
+	text(l= ' + Output Texture Size', al= 'left', h= 20)
+	outputSiz_menu = optionMenu(h= 21)
+	menuItem('{ As is }')
+	for siz in siz_list:
+		menuItem(siz)
 	text(l= '', w= 20)
 	setParent('..')
 
@@ -301,6 +312,8 @@ def ui_main():
 	def sendMission(*args):
 		outputFormat = outputExt_menu.getValue()
 		outputFormat = '' if outputFormat == '{ As is }' else outputFormat
+		outputSize = outputSiz_menu.getValue()
+		outputSize = '' if outputSize == '{ As is }' else outputSize
 		isUDIM = udim_mqsb.isChecked()
 		sepTYPE = sepTYPE_btn.getLabel()
 		buildShad = shad_mqsb.isChecked()
@@ -312,7 +325,7 @@ def ui_main():
 				if not item in selectedItem:
 					textureInputSet.pop(item, None)
 		if textureInputSet:
-			sbs2maya.dist(textureInputSet, outputFormat, sepTYPE, isUDIM, buildShad, outputDir)
+			sbs2maya.dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 
