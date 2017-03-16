@@ -23,7 +23,7 @@ sbsarGraph = 'Converter'
 def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
-	outputDir = '{inputPath}' + os.sep + 'converted' if not outputDir else outputDir
+	outputDir = (os.path.dirname(texturePath[0]) + os.sep + 'converted') if not outputDir else outputDir
 	outputName = textureName + '{outputNodeName}'
 	input_baseColor = texturePath[0]
 	input_roughness = texturePath[3]
@@ -67,7 +67,7 @@ def sbsrender_exec(cmd, outputDir):
 	if not os.path.exists(outputDir):
 		os.mkdir(outputDir)
 
-	process = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+	process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
 	convertResult, convertError = process.communicate()
 	hasError = None
 

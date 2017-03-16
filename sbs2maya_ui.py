@@ -44,8 +44,7 @@ def ui_main():
 	text(l= '  - Texture Folder Path')
 
 	rowLayout(nc= 2, adj= 1)
-	#inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
-	inputDir_textF = textField(text= 'C:/Users/David/Desktop/jetTest/ddo')
+	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
 	
@@ -197,7 +196,7 @@ def ui_main():
 	# commands
 	def openTextureFolder(*args):
 		textureDir = inputDir_textF.getText()
-		if not textureDir:
+		if not textureDir or not os.path.exists(textureDir):
 			textureDir = workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1)
 		if os.path.exists(textureDir):
 			result = fileDialog2(cap= 'Select Texture Folder', fm= 3, okc= 'Select', dir= textureDir)
@@ -208,7 +207,7 @@ def ui_main():
 
 	def openOutputFolder(*args):
 		textureDir = inputDir_textF.getText()
-		if not textureDir:
+		if not textureDir or not os.path.exists(textureDir):
 			textureDir = workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1)
 		if os.path.exists(textureDir):
 			result = fileDialog2(cap= 'Select Output Folder', fm= 3, okc= 'Select', dir= textureDir)
@@ -317,7 +316,8 @@ def ui_main():
 		isUDIM = udim_mqsb.isChecked()
 		sepTYPE = sepTYPE_btn.getLabel()
 		buildShad = shad_mqsb.isChecked()
-		outputDir = os.path.abspath(outputDir_textF.getText())
+		outputDirTF = outputDir_textF.getText()
+		outputDir = os.path.abspath(outputDirTF) if outputDirTF else ''
 		if selt_mqsb.isChecked():
 			selectedItem = checkResult_txsc.getSelectItem()
 			allItems = checkResult_txsc.getAllItems()
