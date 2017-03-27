@@ -1,5 +1,6 @@
 {
-	"sbsar" : "P:\\Temp\\AK\\PBR_SBS2VRay.sbsar",
+	"sbsar" : "PBR_SBS2VRay.sbsar",
+	"shade" : "vrayShading.ma",
 	"graph" : "Converter",
 	"input" : { "input_a(inputNodeName)" : "inputTypeA",
 				"input_b(inputNodeName)" : "inputTypeB",
@@ -7,17 +8,15 @@
 	},
 	"value" : { "input_a(inputNodeName)" : 123
 	},
-	"output" : { "typeA(outputNodeName)" : ["textureNodeNameA"],
-				 "typeB(outputNodeName)" : ["textureNodeNameB"],
-				 "typeC(outputNodeName)" : ["textureNodeNameC"],
+	"yield" : { "typeA(outputNodeName)" : ["textureNodeNameA"],
+				"typeB(outputNodeName)" : ["textureNodeNameB"],
+				"typeC(outputNodeName)" : ["textureNodeNameC"],
 	},
-	"copy" : { "typeD(outputNodeName)" : ["textureNodeNameD"]
+	"xerox" : { "typeD(outputNodeName)" : ["textureNodeNameD"]
 	},
-	"selOut" : [ "outputNodeName"
-	],
-	"option" : {
+	"guide" : {
 		"memory" : 1024,
-		"engine" : "",
-		"compression" : ""
+		"engine" : "d3d10pc",
+		"ddsCmp" : "raw"
 	}
 }

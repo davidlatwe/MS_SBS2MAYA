@@ -47,27 +47,8 @@ def ui_main():
 	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
-	
-	rowLayout(nc= 4)
-	sbsConType = radioCollection()
-	radioButton ('rad_A', l= 'albedo')
-	radioButton ('rad_B', l= 'Metallic')
-	radioButton ('rad_C', l= 'Metalness')
-	setParent('..')
 
-	def rad_ccmd(*args):
-		global sbs_type
-		st = sbsConType.getSelect()
-		if st.endswith('A'):
-			sbs_type = sbs_typeA
-		if st.endswith('B'):
-			sbs_type = sbs_typeB
-		if st.endswith('C'):
-			sbs_type = sbs_typeC
-
-	radioButton ('rad_A', e= 1, cc= rad_ccmd)
-	radioButton ('rad_B', e= 1, cc= rad_ccmd)
-	radioButton ('rad_C', e= 1, cc= rad_ccmd)
+	text(l= '', h= 2)
 
 	text(l= '  - Output Folder Path')
 
@@ -91,7 +72,7 @@ def ui_main():
 	udim_mqsb = mqsb.SwitchBox(onl= 'UDIM', ofl= 'NO', w= 130, h= 25, v= False, p= cmB)
 	setParent('..')
 	setParent('..')
-	text(l= '', w= 21)
+	text(l= '', w= 1)
 	setParent('..')
 
 	# file name format objName._udim._type.format
@@ -115,23 +96,25 @@ def ui_main():
 	for ext in ext_list:
 		menuItem(ext)
 	setParent('..')
-	text(l= '', w= 20)
+	text(l= '', w= 10)
 	setParent('..')
 	
+	text(l= '', h= 6)
 	# detected (good to go) obj list
 	hide_row = rowLayout(nc= 3, adj= 1)
 	text(l= ' + Hide UDIM Texture', al= 'left', h= 20)
 	columnLayout()
 	cmC= columnLayout()
-	hide_mqsb = mqsb.SwitchBox(onl= 'Hide', ofl= 'Show All', w= 160, h= 20, v= False, p= cmC)
+	hide_mqsb = mqsb.SwitchBox(onl= 'Yes, Hide', ofl= 'No, Show All', w= 180, h= 20, v= False, p= cmC)
 	setParent('..')
 	setParent('..')
-	text(l= '', w= 18)
+	text(l= '', w= 1)
 	setParent('..')
 
+	text(l= '', h= 2)
 	rowLayout(nc= 3, adj= 2)
 	text(l= '', w= 1)
-	checkTexture_btn = button(l= 'Check Texture File', h= 30)
+	checkTexture_btn = button(l= 'Resolve Input Image File Path', h= 30)
 	text(l= '', w= 1)
 	setParent('..')
 	
@@ -144,13 +127,33 @@ def ui_main():
 	setParent('..')
 	
 	# GO
+	rowLayout(nc= 3, adj= 1)
+	text(l= '  - Convert Selected Only', al= 'left', h= 20)
+	columnLayout()
+	cmD= columnLayout()
+	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 180, h= 24, v= False, p= cmD)
+	setParent('..')
+	setParent('..')
+	text(l= '', w= 1)
+	setParent('..')
+
+	rowLayout(nc= 3, adj= 1)
+	text(l= '  - Build VRay Shader', al= 'left', h= 20)
+	columnLayout()
+	cmE= columnLayout()
+	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 180, h= 24, v= True, p= cmE)
+	setParent('..')
+	setParent('..')
+	text(l= '', w= 1)
+	setParent('..')
+
 	rowLayout(nc= 3, adj= 1, h= 30)
 	text(l= ' + Output Texture File Format', al= 'left', h= 20)
 	outputExt_menu = optionMenu(h= 21)
 	menuItem('{ As is }')
 	for ext in ext_list:
 		menuItem(ext)
-	text(l= '', w= 20)
+	text(l= '', w= 10)
 	setParent('..')
 
 	rowLayout(nc= 3, adj= 1, h= 30)
@@ -159,29 +162,10 @@ def ui_main():
 	menuItem('{ As is }')
 	for siz in siz_list:
 		menuItem(siz)
-	text(l= '', w= 20)
-	setParent('..')
-
-	rowLayout(nc= 3, adj= 1)
-	text(l= '  - Convert Selected Only', al= 'left', h= 20)
-	columnLayout()
-	cmD= columnLayout()
-	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 160, h= 20, v= False, p= cmD)
-	setParent('..')
-	setParent('..')
-	text(l= '', w= 18)
-	setParent('..')
-
-	rowLayout(nc= 3, adj= 1)
-	text(l= '  - Build VRay Shader', al= 'left', h= 20)
-	columnLayout()
-	cmE= columnLayout()
-	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 160, h= 20, v= True, p= cmE)
-	setParent('..')
-	setParent('..')
-	text(l= '', w= 18)
+	text(l= '', w= 10)
 	setParent('..')
 	
+	text(l= '', h= 6)
 	rowLayout(nc= 3, adj= 2)
 	text(l= '', w= 1)
 	sendMission_btn = button(l= 'Start Process', h= 40)
@@ -193,7 +177,10 @@ def ui_main():
 	window(windowName, e= 1, w= windowWidth, h= 430)
 
 
-	# commands
+
+	# #################################################################################################
+	# ui commands
+	# 
 	def openTextureFolder(*args):
 		textureDir = inputDir_textF.getText()
 		if not textureDir or not os.path.exists(textureDir):
@@ -204,6 +191,7 @@ def ui_main():
 				inputDir_textF.setText(result[0])
 
 	icBtn_textF_choose.setCommand(partial(openTextureFolder))
+
 
 	def openOutputFolder(*args):
 		textureDir = inputDir_textF.getText()
@@ -216,6 +204,7 @@ def ui_main():
 
 	ocBtn_textF_choose.setCommand(partial(openOutputFolder))
 
+
 	def udim_mqsb_switch(status, *args):
 		if status:
 			row_Pattern.columnWidth([3, 78])
@@ -227,6 +216,7 @@ def ui_main():
 	udim_mqsb.onCmd = partial(udim_mqsb_switch, 1)
 	udim_mqsb.offCmd = partial(udim_mqsb_switch, 0)
 
+
 	def sepBtn_Label(btn, *args):
 		name_sep = ['.', '_']
 		i = name_sep.index(btn.getLabel())
@@ -234,6 +224,7 @@ def ui_main():
 
 	sepUDIM_btn.setCommand(partial(sepBtn_Label, sepUDIM_btn))
 	sepTYPE_btn.setCommand(partial(sepBtn_Label, sepTYPE_btn))
+
 
 	def scrollList_deselectAll(*args):
 		checkResult_txsc.deselectAll()
@@ -249,6 +240,7 @@ def ui_main():
 
 	checkResult_txsc.deleteKeyCommand(partial(scrollList_deselectAll))
 	checkResult_txsc.doubleClickCommand(partial(scrollList_doubleClick))
+
 
 	global textureInputSet
 	textureInputSet = {}
