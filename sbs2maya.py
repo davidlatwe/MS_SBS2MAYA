@@ -14,15 +14,13 @@ import mMaya.mVRay as mVRay; reload(mVRay)
 import os
 
 
-sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer 5\\sbsrender.exe'
-#sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer\\5\\bin64\\sbsrender.exe'
-sbsarFile = 'T:\\Script\\Maya\\tools\\MS_SBS2MAYA\\sbsarLib\\PBR_SBS2VRay.sbsar'
-sbsarGraph = 'Converter'
-
-
 def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
+	sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer 5\\sbsrender.exe'
+	sbsarFile = 'T:\\Script\\Maya\\tools\\MS_SBS2MAYA\\sbsarLib\\PBR_SBS2VRay.sbsar'
+	sbsarGraph = 'Converter'
+
 	outputDir = (os.path.dirname(texturePath[0]) + os.sep + 'converted') if not outputDir else outputDir
 	outputName = textureName + '{outputNodeName}'
 	input_baseColor = texturePath[0]
@@ -30,8 +28,11 @@ def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize)
 	input_metallic = texturePath[1]
 
 	if not os.path.exists(sbsrenderPath):
-		error('sbsrender was not found in this path: ' + sbsrenderPath)
-		return None
+		warning('sbsrender was not found in this path: ' + sbsrenderPath)
+		sbsrenderPath = sbsrenderPath.replace('5', '6')
+		if not os.path.exists(sbsrenderPath):
+			error('sbsrender was not found in this path: ' + sbsrenderPath)
+			return None
 	if not os.path.exists(sbsarFile):
 		error('sbsar file was not found in this path: ' + sbsarFile)
 		return None
@@ -56,6 +57,7 @@ def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize)
 		+ '--output-name "%s" ' % outputName \
 		+ '--output-format "%s" ' % outputFormat \
 		+ '--engine "d3d10pc" ' \
+		+ '--memory-budget 2048 ' \
 		+ '--set-value $outputsize@' + outputSize + ',' + outputSize
 
 	return cmd, outputDir
@@ -219,6 +221,7 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 def dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
 	"""
 	"""
+	tick = timerX()
 	shadedItem = []
 	for texture in textureInputSet:
 		inputDir = textureInputSet[texture][0]
@@ -240,3 +243,4 @@ def dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, 
 		if not itemName in shadedItem and buildShad and optPathDict is not None:
 			buildShadingNetwork(optPathDict, itemName, isUDIM)
 		shadedItem.append(itemName)
+	print 'Job Time: ' + str(timerX(st= tick))

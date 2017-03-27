@@ -30,7 +30,7 @@ def ui_main():
 	if window(windowName, q= 1, ex= 1):
 		deleteUI(windowName)
 
-	window(windowName, t= 'SBS 2 MAYA - v1.1 Beta', s= 0, mxb= 0, mnb= 0)
+	window(windowName, t= 'SBS 2 MAYA - v1.2', s= 0, mxb= 0, mnb= 0)
 	main_column = columnLayout(adj= 1, cal= 'left')
 	
 	#main_form = formLayout()
