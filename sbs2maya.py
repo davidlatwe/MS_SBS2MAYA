@@ -11,40 +11,43 @@ import mMaya; reload(mMaya)
 import mMaya.mShading as mShading; reload(mShading)
 import mMaya.mTexture as mTexture; reload(mTexture)
 import mMaya.mVRay as mVRay; reload(mVRay)
+import json
 import os
 
 
 def get_sbsWorkConfigs():
 	"""
 	"""
-	configFile = 'sbs2maya_config'
+	configFile = 'sbs2maya_workConfigs.json'
 	return '/'.join([os.environ.get('MAYA_APP_DIR'), configFile])
 
 
 def get_lastSettings():
 	"""
 	"""
-	settings = 'sbs2maya_settings'
+	settings = 'sbs2maya_lastSettings.json'
 	return '/'.join([os.environ.get('MAYA_APP_DIR'), settings])
 
 
-def load_sbsWorkConfigs(configPath):
+def load_json(jsonPath):
 	"""
 	"""
-	configData = []
-	with open(configPath) as config:
-		configData = config.read().splitlines()
+	dictData = {}
+	if os.path.isfile(jsonPath):
+		try:
+			with open(jsonPath) as jsonFile:
+				dictData = json.load(jsonFile)
+		except:
+			error('JSON file not exists. -> ' + jsonPath)
 
-	return configData
+	return dictData
 
 
-def save_sbsWorkConfigs(configPath, configData):
+def save_json(jsonPath, dictData):
 	"""
 	"""
-	with open(configPath, 'w') as config:
-		for item in configData:
-			if item:
-				config.write('%s\n' % item)
+	with open(jsonPath, 'w') as jsonFile:
+			json.dump(dictData, jsonFile, indent=4)
 
 
 def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
