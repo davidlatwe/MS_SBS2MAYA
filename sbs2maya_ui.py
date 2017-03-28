@@ -35,10 +35,13 @@ def ui_main():
 	
 	#main_form = formLayout()
 
+	rowLayout(nc= 2, adj= 1, w= windowWidth)
 	bannerArea = columnLayout(adj= 1)
-	bannerTxt = text(l= 'SBS2MAYA', w= windowWidth)
+	bannerTxt = text(l= 'sbsrender 2 maya')
 	QBannerTxt = mqt.convert(bannerTxt)
-	QBannerTxt.setStyleSheet('QObject {font: bold 42px; color: #222222;}')
+	QBannerTxt.setStyleSheet('QObject {font: bold 26px; color: #222222;}')
+	setParent('..')
+	configBtn = iconTextButton(i= 'gear.png')
 	setParent('..')
 
 	text(l= '  - Texture Folder Path')

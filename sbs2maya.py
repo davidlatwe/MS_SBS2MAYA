@@ -14,6 +14,39 @@ import mMaya.mVRay as mVRay; reload(mVRay)
 import os
 
 
+def get_sbsWorkConfigs():
+	"""
+	"""
+	configFile = 'sbs2maya_config'
+	return '/'.join([os.environ.get('MAYA_APP_DIR'), configFile])
+
+
+def get_lastSettings():
+	"""
+	"""
+	settings = 'sbs2maya_settings'
+	return '/'.join([os.environ.get('MAYA_APP_DIR'), settings])
+
+
+def load_sbsWorkConfigs(configPath):
+	"""
+	"""
+	configData = []
+	with open(configPath) as config:
+		configData = config.read().splitlines()
+
+	return configData
+
+
+def save_sbsWorkConfigs(configPath, configData):
+	"""
+	"""
+	with open(configPath, 'w') as config:
+		for item in configData:
+			if item:
+				config.write('%s\n' % item)
+
+
 def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
