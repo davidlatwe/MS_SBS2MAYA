@@ -22,32 +22,25 @@ def get_sbsWorkConfigs():
 	return '/'.join([os.environ.get('MAYA_APP_DIR'), configFile])
 
 
-def get_lastSettings():
+def get_lastStatus():
 	"""
 	"""
-	settings = 'sbs2maya_lastSettings.json'
+	settings = 'sbs2maya_lastStatus.json'
 	return '/'.join([os.environ.get('MAYA_APP_DIR'), settings])
 
 
 def load_json(jsonPath):
 	"""
 	"""
-	dictData = {}
-	if os.path.isfile(jsonPath):
-		try:
-			with open(jsonPath) as jsonFile:
-				dictData = json.load(jsonFile)
-		except:
-			error('JSON file not exists. -> ' + jsonPath)
-
-	return dictData
+	with open(jsonPath) as jsonFile:
+		return json.load(jsonFile)
 
 
 def save_json(jsonPath, dictData):
 	"""
 	"""
 	with open(jsonPath, 'w') as jsonFile:
-			json.dump(dictData, jsonFile, indent=4)
+		json.dump(dictData, jsonFile, indent=4)
 
 
 def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):

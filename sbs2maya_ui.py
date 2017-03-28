@@ -21,28 +21,62 @@ sbs_typeC = ['BaseColor', 'Metalness', 'Normal', 'Roughness']
 global sbs_type
 sbs_type = []
 
+'''
+	def rad_ccmd(*args):
+		global sbs_type
+		st = sbsConType.getSelect()
+		if st.endswith('A'):
+			sbs_type = sbs_typeA
+		if st.endswith('B'):
+			sbs_type = sbs_typeB
+		if st.endswith('C'):
+			sbs_type = sbs_typeC
+'''
+windowTitle = 'SBS 2 MAYA - v1.2'
+windowSettings = ' - Settings'
+windowName = 'ms_sbs2maya_mainUI'
+column_main = windowName + '_main_column'
+column_workArea = windowName + '_workArea_column'
+column_settings = windowName + '_settings_column'
+
+
+def ui_settings():
+	"""
+	"""
+	if columnLayout(column_settings, q= 1, ex= 1):
+		deleteUI(column_settings)
+	columnLayout(column_settings, adj= 1, cal= 'left', p= column_main)
+	text(l= '')
+	button()
+	setParent('..')
+
 
 def ui_main():
 	
-	windowName = 'ms_sbs2maya_mainUI'
 	windowWidth = 320
 
 	if window(windowName, q= 1, ex= 1):
 		deleteUI(windowName)
 
-	window(windowName, t= 'SBS 2 MAYA - v1.2', s= 0, mxb= 0, mnb= 0)
-	main_column = columnLayout(adj= 1, cal= 'left')
+	window(windowName, t= windowTitle, s= 0, mxb= 0, mnb= 0)
+	columnLayout(column_main, adj= 1)
 	
 	#main_form = formLayout()
 
 	rowLayout(nc= 2, adj= 1, w= windowWidth)
-	bannerArea = columnLayout(adj= 1)
+	bannerArea = columnLayout(adj= 1, h= 30)
 	bannerTxt = text(l= 'sbsrender 2 maya')
 	QBannerTxt = mqt.convert(bannerTxt)
 	QBannerTxt.setStyleSheet('QObject {font: bold 26px; color: #222222;}')
 	setParent('..')
-	configBtn = iconTextButton(i= 'gear.png')
+	configBtn = iconTextButton(i= 'gear.png', h= 30)
 	setParent('..')
+	
+	text(l= '', h= 4)
+	separator()
+	text(l= '', h= 4)
+	
+	columnLayout(column_workArea, adj= 1, cal= 'left')
 
 	text(l= '  - Texture Folder Path')
 
@@ -176,14 +210,24 @@ def ui_main():
 	setParent('..')
 	text(l= '', h= 2)
 
-
+	setParent('..')
 	window(windowName, e= 1, w= windowWidth, h= 430)
 
 
 
 	# #################################################################################################
 	# ui commands
-	# 
+	#
+	def switchSettingsUI():
+		ui_settings()
+		mainVis = columnLayout(column_workArea, q= 1, vis= True)
+		columnLayout(column_workArea, e= 1, vis= not mainVis)
+		columnLayout(column_settings, e= 1, vis= mainVis)
+		window(windowName, e= 1, t= windowTitle + (windowSettings if mainVis else ''))
+
+	configBtn.setCommand(switchSettingsUI)
+
+
 	def openTextureFolder(*args):
 		textureDir = inputDir_textF.getText()
 		if not textureDir or not os.path.exists(textureDir):
