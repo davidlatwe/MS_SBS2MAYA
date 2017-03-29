@@ -1,19 +1,19 @@
 {
 	"sbsar" : "PBR_SBS2VRay.sbsar",
 	"shade" : "PBR_SBS2VRay.ma",
-	"graph" : "Converter",
-	"input" : { "input_baseColor" : ["basecolor", "albedo", "basecolor"],
-				"input_metallic" : ["metallic", "metalness", "metalness"],
-				"input_roughness" : ["roughness", "roughness", "roughness"]				
+	"graph" : "",
+	"input" : { "basecolor": "input_baseColor",
+				"metallic" : "input_metallic",
+				"roughness": "input_roughness"				
 	},
 	"value" : {
 	},
-	"yield" : { "typeA(mayaNodeName)" : "diffuse",
-				"typeB(mayaNodeName)" : "reflection",
-				"typeC(mayaNodeName)" : "glossiness",
-				"typeC(mayaNodeName)" : "ior",
+	"yield" : { "diffuse"   : "_outputNodeName_diffuse_file",
+				"reflection": "_outputNodeName_reflection_file",
+				"glossiness": "_outputNodeName_glossiness_file",
+				"ior"       : "_outputNodeName_ior_file"
 	},
-	"xerox" : { "typeD(mayaNodeName)" : ["normal"]
+	"xerox" : { "normal"    : "_outputNodeName_normal_file"
 	},
 	"guide" : {
 		"memory" : 1024,

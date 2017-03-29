@@ -15,23 +15,7 @@ import sbs2maya; reload(sbs2maya)
 
 ext_list = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
 siz_list = ['64', '128', '256', '512', '1024', '2048', '4096', '8192']
-sbs_typeA = ['albedo', 'metalness', 'normal', 'roughness']
-sbs_typeB = ['BaseColor', 'Metallic', 'Normal', 'Roughness']
-sbs_typeC = ['BaseColor', 'Metalness', 'Normal', 'Roughness']
-global sbs_type
-sbs_type = []
 
-'''
-	def rad_ccmd(*args):
-		global sbs_type
-		st = sbsConType.getSelect()
-		if st.endswith('A'):
-			sbs_type = sbs_typeA
-		if st.endswith('B'):
-			sbs_type = sbs_typeB
-		if st.endswith('C'):
-			sbs_type = sbs_typeC
-'''
 windowTitle = 'SBS 2 MAYA - v1.2'
 windowSettings = ' - Settings'
 windowName = 'ms_sbs2maya_mainUI'
@@ -39,8 +23,12 @@ column_main = windowName + '_main_column'
 column_workArea = windowName + '_workArea_column'
 column_settings = windowName + '_settings_column'
 windowWidth = 320
-height_workArea = 570
-height_settings = 229
+height_workArea = 615
+height_settings = 226
+if about(li= True):
+	height_offset = 1
+if about(win= True):
+	height_offset = 3
 
 
 def ui_settings():
@@ -273,15 +261,14 @@ def ui_main():
 		mainVis = columnLayout(column_workArea, q= 1, vis= True)
 		columnLayout(column_workArea, e= 1, vis= not mainVis)
 		columnLayout(column_settings, e= 1, vis= mainVis)
-		print mainVis
 		window(windowName, e= 1,
 			t= windowTitle + (windowSettings if mainVis else ''),
-			h= height_settings if mainVis else (height_workArea + 3))
+			h= height_settings if mainVis else (height_workArea + height_offset))
 
 	configBtn.setCommand(switchSettingsUI)
 
 
-	def listSbsArgsFiles(*args):
+	def listSbsrenderArgsFiles(*args):
 		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
 		sbsarFile_menu.clear()
 		for root, dirs, files in os.walk(configFile['sbsarLib']):
@@ -290,8 +277,8 @@ def ui_main():
 					fileName = os.path.join(root, f).split(configFile['sbsarLib'])[-1]
 					menuItem(fileName, p= sbsarFile_menu)
 
-	sbsarFile_menu.beforeShowPopup(listSbsArgsFiles)
-	listSbsArgsFiles()
+	sbsarFile_menu.beforeShowPopup(listSbsrenderArgsFiles)
+	listSbsrenderArgsFiles()
 
 
 	def openTextureFolder(*args):
@@ -358,6 +345,10 @@ def ui_main():
 	global textureInputSet
 	textureInputSet = {}
 	def checkTextureFile(*args):
+		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		sbsarPath = configFile['sbsarLib'] + sbsarFile_menu.getValue()
+		sbsInputType = sbs2maya.load_json(sbsarPath)['input'].keys()
+		print sbsInputType
 		inputDir = os.path.abspath(inputDir_textF.getText())
 		dirWalk = walk_mqsb.isChecked()
 		isUDIM = udim_mqsb.isChecked()
@@ -367,7 +358,7 @@ def ui_main():
 		sepTYPE = sepTYPE_btn.getLabel()
 
 		checkResult_txsc.removeAll()
-		global textureInputSet
+		#global textureInputSet
 		textureInputSet = {}
 
 		# grab all files
@@ -385,28 +376,30 @@ def ui_main():
 						fileList.append(f)
 
 		# filter out wont be matched
-		pathTmp = []
+		infoBox = []
+		pathDict = {}
 		itemName_currentMatch = ''
 		for f in fileList:
 			fileName = os.path.basename(os.path.splitext(f)[0])
-			typeName = fileName.split(sepTYPE)[-1]
+			typeName = fileName.split(sepTYPE)[-1].lower()
 			itemName = fileName[:-(len(typeName) + 1)]
 			udimCode = itemName.split(sepUDIM)[-1] if isUDIM else ''
 			if not isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
 				continue
 			if not itemName_currentMatch and not itemName == itemName_currentMatch:
-				if len(pathTmp) > 0 and len(pathTmp) < 6:
-					pathTmp = []
-			if typeName in sbs_type and (udimCode.isdigit() if isUDIM else True):
-				if typeName == sbs_type[0] and not pathTmp:
-					pathTmp.append(os.path.dirname(f))
-					pathTmp.append(os.path.splitext(f)[-1][1:])
+				if len(infoBox) > 0 and len(infoBox) < 6:
+					infoBox = []
+			if typeName in sbsInputType and (udimCode.isdigit() if isUDIM else True):
+				if typeName == sbsInputType[0] and not infoBox:
+					infoBox.append(os.path.dirname(f))
+					infoBox.append(os.path.splitext(f)[-1][1:])
 					itemName_currentMatch = itemName
-				if len(pathTmp) >= 2:
-					pathTmp.append(f)
-			if len(pathTmp) == 6:
-				textureInputSet[itemName] = pathTmp
-				pathTmp = []
+				if len(infoBox) >= 2:
+					infoBox.append(f)
+					print infoBox
+			if len(infoBox) == 6:
+				textureInputSet[itemName] = infoBox
+				infoBox = []
 
 		for item in textureInputSet:
 			checkResult_txsc.append(item)
@@ -431,7 +424,8 @@ def ui_main():
 				if not item in selectedItem:
 					textureInputSet.pop(item, None)
 		if textureInputSet:
-			sbs2maya.dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir)
+			sbs2maya.dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM,
+				buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 
@@ -473,7 +467,7 @@ def ui_main():
 			shad_mqsb.setChecked(settings['buildShd'])
 			outputExt_menu.setValue(settings['outFormat'])
 			outputSiz_menu.setValue(settings['outSize'])
-
+	
 	restoreLastStatus()
 
 	showWindow(windowName)

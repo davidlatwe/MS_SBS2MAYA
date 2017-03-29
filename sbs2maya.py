@@ -35,7 +35,7 @@ def form_sbsWorkConfigs():
 	return {
 		'sbsrender': 'C:/Program Files/Allegorithmic/Substance Designer 5/sbsrender.exe',
 		'sbsarLib': os.path.dirname(__file__).replace('\\', '/') + '/sbsarLib',
-		'saveLast': 1,
+		'saveLast': 0,
 		}
 
 
@@ -49,12 +49,12 @@ def form_lastStatus():
 		'udim_uv': 0,
 		'sep_name': '',
 		'sep_udim': '',
-		'img_type': '',
+		'img_type': '. ***',
 		'hide_udim': 0,
 		'selected': 0,
 		'buildShd': 1,
-		'outFormat': '',
-		'outSize': ''
+		'outFormat': '{ As is }',
+		'outSize': '{ As is }'
 		}
 
 
@@ -84,7 +84,8 @@ def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, texturePath, outputForma
 	configFile = load_json(get_sbsWorkConfigs())
 	sbsrenderPath = configFile['sbsrender']
 	sbsarFile = configFile['sbsarLib'] + sbsArgsFiles
-	sbsarGraph = 'Converter'
+	sbsrenderArgs = load_json(sbsarFile)
+	sbsarGraph = sbsrenderArgs['graph']
 
 	outputDir = (os.path.dirname(texturePath[0]) + os.sep + 'converted') if not outputDir else outputDir
 	outputName = textureName + '{outputNodeName}'
