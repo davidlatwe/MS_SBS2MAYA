@@ -38,23 +38,64 @@ windowName = 'ms_sbs2maya_mainUI'
 column_main = windowName + '_main_column'
 column_workArea = windowName + '_workArea_column'
 column_settings = windowName + '_settings_column'
+windowWidth = 320
+height_workArea = 570
+height_settings = 229
 
 
 def ui_settings():
 	"""
 	"""
+	configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
 	if columnLayout(column_settings, q= 1, ex= 1):
 		deleteUI(column_settings)
 	columnLayout(column_settings, adj= 1, cal= 'left', p= column_main)
-	text(l= '')
-	button()
+
+	text(l= '  - Sbsrender App Path')
+	rowLayout(nc= 1, adj= 1)
+	renP_text = textField(text= configFile['sbsrender'])
 	setParent('..')
+
+	text(l= '', h= 2)
+
+	text(l= '  - Converter Lib Path')
+	rowLayout(nc= 1, adj= 1)
+	sLib_text = textField(text= configFile['sbsarLib'])
+	setParent('..')
+
+	text(l= '', h= 2)
+
+	text(l= '  - Save Last UI Settings')
+	text(l= '', h= 2)
+	rowLayout(nc= 2, adj= 2)
+	text(l= '', w= 1)
+	stA= columnLayout()
+	save_mqsb = mqsb.SwitchBox(onl= 'YES', ofl= 'NO', w= 130, h= 25, v= configFile['saveLast'], p= stA)
+	setParent('..')
+	setParent('..')
+
+	text(l= '', h= 12)
+	rowLayout(nc= 3, adj= 2)
+	text(l= '', w= 1)
+	sFig_btn = button(l= 'Save Configs', h= 40)
+	text(l= '', w= 1)
+	setParent('..')
+
+	setParent('..')
+
+	def saveConfigs(*args):
+		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		configFile['sbsrender'] = renP_text.getText()
+		configFile['sbsarLib'] = sLib_text.getText()
+		configFile['saveLast'] = save_mqsb.isChecked()
+		sbs2maya.save_json(sbs2maya.get_sbsWorkConfigs(), configFile)
+
+	sFig_btn.setCommand(saveConfigs)
 
 
 def ui_main():
-	
-	windowWidth = 320
-
+	"""
+	"""
 	if window(windowName, q= 1, ex= 1):
 		deleteUI(windowName)
 
@@ -64,12 +105,12 @@ def ui_main():
 	#main_form = formLayout()
 
 	rowLayout(nc= 2, adj= 1, w= windowWidth)
-	bannerArea = columnLayout(adj= 1, h= 30)
-	bannerTxt = text(l= 'sbsrender 2 maya')
+	bannerArea = columnLayout(adj= 1, h= 40)
+	bannerTxt = text(l= '  sbsrender 2 maya')
 	QBannerTxt = mqt.convert(bannerTxt)
 	QBannerTxt.setStyleSheet('QObject {font: bold 26px; color: #222222;}')
 	setParent('..')
-	configBtn = iconTextButton(i= 'gear.png', h= 30)
+	configBtn = iconTextButton(i= 'gear.png', h= 40)
 	setParent('..')
 	
 	text(l= '', h= 4)
@@ -77,6 +118,16 @@ def ui_main():
 	text(l= '', h= 4)
 	
 	columnLayout(column_workArea, adj= 1, cal= 'left')
+
+	text(l= ' - Select Converter', al= 'left', h= 20)
+
+	rowLayout(nc= 2, adj= 1)
+	sbsarFile_menu = optionMenu(h= 21)
+	mcBtn_textF_choose = iconTextButton(i= 'editRenderPass.png', w= 20, h= 20)
+	#text(l= '', w= 3)
+	setParent('..')
+
+	text(l= '', h= 2)
 
 	text(l= '  - Texture Folder Path')
 
@@ -142,7 +193,7 @@ def ui_main():
 	text(l= ' + Hide UDIM Texture', al= 'left', h= 20)
 	columnLayout()
 	cmC= columnLayout()
-	hide_mqsb = mqsb.SwitchBox(onl= 'Yes, Hide', ofl= 'No, Show All', w= 180, h= 20, v= False, p= cmC)
+	hide_mqsb = mqsb.SwitchBox(onl= 'Yes, Hide', ofl= 'No, Show All', w= 160, h= 20, v= False, p= cmC)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 1)
@@ -164,42 +215,42 @@ def ui_main():
 	setParent('..')
 	
 	# GO
-	rowLayout(nc= 3, adj= 1)
+	rowLayout(nc= 3, adj= 1, h= 28)
 	text(l= '  - Convert Selected Only', al= 'left', h= 20)
 	columnLayout()
 	cmD= columnLayout()
-	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 180, h= 24, v= False, p= cmD)
+	selt_mqsb = mqsb.SwitchBox(onl= 'Yes, Selected', ofl= 'No, All', w= 160, h= 22, v= False, p= cmD)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 1)
 	setParent('..')
 
-	rowLayout(nc= 3, adj= 1)
-	text(l= '  - Build VRay Shader', al= 'left', h= 20)
+	rowLayout(nc= 3, adj= 1, h= 28)
+	text(l= '  - Build Shading Networks', al= 'left', h= 20)
 	columnLayout()
 	cmE= columnLayout()
-	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 180, h= 24, v= True, p= cmE)
+	shad_mqsb = mqsb.SwitchBox(onl= 'Yes', ofl= 'No', w= 160, h= 22, v= True, p= cmE)
 	setParent('..')
 	setParent('..')
 	text(l= '', w= 1)
 	setParent('..')
 
-	rowLayout(nc= 3, adj= 1, h= 30)
+	rowLayout(nc= 3, adj= 1, h= 28)
 	text(l= ' + Output Texture File Format', al= 'left', h= 20)
 	outputExt_menu = optionMenu(h= 21)
 	menuItem('{ As is }')
 	for ext in ext_list:
 		menuItem(ext)
-	text(l= '', w= 10)
+	text(l= '', w= 3)
 	setParent('..')
 
-	rowLayout(nc= 3, adj= 1, h= 30)
+	rowLayout(nc= 3, adj= 1, h= 28)
 	text(l= ' + Output Texture Size', al= 'left', h= 20)
 	outputSiz_menu = optionMenu(h= 21)
 	menuItem('{ As is }')
 	for siz in siz_list:
 		menuItem(siz)
-	text(l= '', w= 10)
+	text(l= '', w= 3)
 	setParent('..')
 	
 	text(l= '', h= 6)
@@ -211,8 +262,7 @@ def ui_main():
 	text(l= '', h= 2)
 
 	setParent('..')
-	window(windowName, e= 1, w= windowWidth, h= 430)
-
+	
 
 
 	# #################################################################################################
@@ -223,9 +273,25 @@ def ui_main():
 		mainVis = columnLayout(column_workArea, q= 1, vis= True)
 		columnLayout(column_workArea, e= 1, vis= not mainVis)
 		columnLayout(column_settings, e= 1, vis= mainVis)
-		window(windowName, e= 1, t= windowTitle + (windowSettings if mainVis else ''))
+		print mainVis
+		window(windowName, e= 1,
+			t= windowTitle + (windowSettings if mainVis else ''),
+			h= height_settings if mainVis else (height_workArea + 3))
 
 	configBtn.setCommand(switchSettingsUI)
+
+
+	def listSbsArgsFiles(*args):
+		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		sbsarFile_menu.clear()
+		for root, dirs, files in os.walk(configFile['sbsarLib']):
+			for f in files:
+				if f.endswith(".json"):
+					fileName = os.path.join(root, f).split(configFile['sbsarLib'])[-1]
+					menuItem(fileName, p= sbsarFile_menu)
+
+	sbsarFile_menu.beforeShowPopup(listSbsArgsFiles)
+	listSbsArgsFiles()
 
 
 	def openTextureFolder(*args):
@@ -348,6 +414,7 @@ def ui_main():
 	checkTexture_btn.setCommand(partial(checkTextureFile))
 
 	def sendMission(*args):
+		sbsArgsFiles = sbsarFile_menu.getValue()
 		outputFormat = outputExt_menu.getValue()
 		outputFormat = '' if outputFormat == '{ As is }' else outputFormat
 		outputSize = outputSiz_menu.getValue()
@@ -364,11 +431,49 @@ def ui_main():
 				if not item in selectedItem:
 					textureInputSet.pop(item, None)
 		if textureInputSet:
-			sbs2maya.dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir)
+			sbs2maya.dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 
 	sendMission_btn.setCommand(partial(sendMission))
 
+	def saveLastStatus(*args):
+		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		if configFile['saveLast']:
+			settings = sbs2maya.load_json(sbs2maya.get_lastStatus())
+			settings['inputPath'] = inputDir_textF.getText()
+			settings['outputPath'] = outputDir_textF.getText()
+			settings['walkSub'] = walk_mqsb.isChecked()
+			settings['udim_uv'] = udim_mqsb.isChecked()
+			settings['sep_name'] = sepUDIM_btn.getLabel()
+			settings['sep_udim'] = sepTYPE_btn.getLabel()
+			settings['img_type'] = inputExt_menu.getValue()
+			settings['hide_udim'] = hide_mqsb.isChecked()
+			settings['selected'] = selt_mqsb.isChecked()
+			settings['buildShd'] = shad_mqsb.isChecked()
+			settings['outFormat'] = outputExt_menu.getValue()
+			settings['outSize'] = outputSiz_menu.getValue()
+			sbs2maya.save_json(sbs2maya.get_lastStatus(), settings)
+
+	window(windowName, e= 1, w= windowWidth, h= height_workArea, cc= saveLastStatus)
+
+	def restoreLastStatus():
+		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		if configFile['saveLast']:
+			settings = sbs2maya.load_json(sbs2maya.get_lastStatus())
+			inputDir_textF.setText(settings['inputPath'])
+			outputDir_textF.setText(settings['outputPath'])
+			walk_mqsb.setChecked(settings['walkSub'])
+			udim_mqsb.setChecked(settings['udim_uv'])
+			sepUDIM_btn.setLabel(settings['sep_name'])
+			sepTYPE_btn.setLabel(settings['sep_udim'])
+			inputExt_menu.setValue(settings['img_type'])
+			hide_mqsb.setChecked(settings['hide_udim'])
+			selt_mqsb.setChecked(settings['selected'])
+			shad_mqsb.setChecked(settings['buildShd'])
+			outputExt_menu.setValue(settings['outFormat'])
+			outputSiz_menu.setValue(settings['outSize'])
+
+	restoreLastStatus()
 
 	showWindow(windowName)

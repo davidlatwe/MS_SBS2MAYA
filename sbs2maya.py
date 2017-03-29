@@ -15,20 +15,6 @@ import json
 import os
 
 
-def get_sbsWorkConfigs():
-	"""
-	"""
-	configFile = 'sbs2maya_workConfigs.json'
-	return '/'.join([os.environ.get('MAYA_APP_DIR'), configFile])
-
-
-def get_lastStatus():
-	"""
-	"""
-	settings = 'sbs2maya_lastStatus.json'
-	return '/'.join([os.environ.get('MAYA_APP_DIR'), settings])
-
-
 def load_json(jsonPath):
 	"""
 	"""
@@ -43,11 +29,61 @@ def save_json(jsonPath, dictData):
 		json.dump(dictData, jsonFile, indent=4)
 
 
-def sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize):
+def form_sbsWorkConfigs():
 	"""
 	"""
-	sbsrenderPath = 'C:\\Program Files\\Allegorithmic\\Substance Designer 5\\sbsrender.exe'
-	sbsarFile = 'T:\\Script\\Maya\\tools\\MS_SBS2MAYA\\sbsarLib\\PBR_SBS2VRay.sbsar'
+	return {
+		'sbsrender': 'C:/Program Files/Allegorithmic/Substance Designer 5/sbsrender.exe',
+		'sbsarLib': os.path.dirname(__file__).replace('\\', '/') + '/sbsarLib',
+		'saveLast': 1,
+		}
+
+
+def form_lastStatus():
+	"""
+	"""
+	return {
+		'inputPath': '',
+		'outputPath': '',
+		'walkSub': 0,
+		'udim_uv': 0,
+		'sep_name': '',
+		'sep_udim': '',
+		'img_type': '',
+		'hide_udim': 0,
+		'selected': 0,
+		'buildShd': 1,
+		'outFormat': '',
+		'outSize': ''
+		}
+
+
+def get_sbsWorkConfigs():
+	"""
+	"""
+	configFile = 'sbs2maya_workConfigs.json'
+	filePath = '/'.join([os.environ.get('MAYA_APP_DIR'), configFile])
+	if not os.path.exists(filePath):
+		save_json(filePath, form_sbsWorkConfigs())
+	return filePath
+
+
+def get_lastStatus():
+	"""
+	"""
+	settings = 'sbs2maya_lastStatus.json'
+	filePath = '/'.join([os.environ.get('MAYA_APP_DIR'), settings])
+	if not os.path.exists(filePath):
+		save_json(filePath, form_lastStatus())
+	return filePath
+
+
+def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize):
+	"""
+	"""
+	configFile = load_json(get_sbsWorkConfigs())
+	sbsrenderPath = configFile['sbsrender']
+	sbsarFile = configFile['sbsarLib'] + sbsArgsFiles
 	sbsarGraph = 'Converter'
 
 	outputDir = (os.path.dirname(texturePath[0]) + os.sep + 'converted') if not outputDir else outputDir
@@ -164,11 +200,11 @@ def sbsrender_exec(cmd, outputDir):
 		return None
 
 
-def sbs2maya_convert(outputDir, textureName, texturePath, outputFormat, outputSize):
+def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize):
 	"""
 	"""
 	# Convert SBS map
-	cmd, outputDir = sbsrender_cmd(outputDir, textureName, texturePath, outputFormat, outputSize)
+	cmd, outputDir = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize)
 	if cmd and outputDir:
 		optPathDict = sbsrender_exec(cmd, outputDir)
 	else:
@@ -247,7 +283,7 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 	mShading.dumpToBin(shadingNodesList, 'SBS_element')
 
 
-def dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
+def dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
 	"""
 	"""
 	tick = timerX()
@@ -257,7 +293,7 @@ def dist(textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, 
 		textureName = texture + sepTYPE
 		texturePath = textureInputSet[texture][2:]
 		outputFormat = textureInputSet[texture][1] if not outputFormat else outputFormat
-		optPathDict = sbs2maya_convert(outputDir, textureName, texturePath, outputFormat, outputSize)
+		optPathDict = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize)
 		itemName = texture[:-5] if isUDIM else texture
 		# check V-Ray is loaded or not
 		if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
