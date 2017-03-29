@@ -78,7 +78,7 @@ def get_lastStatus():
 	return filePath
 
 
-def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize):
+def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputPath, outputFormat, outputSize):
 	"""
 	"""
 	configFile = load_json(get_sbsWorkConfigs())
@@ -201,29 +201,26 @@ def sbsrender_exec(cmd, outputDir):
 		return None
 
 
-def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize):
+def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputPath, xeroxPath, outputFormat, outputSize):
 	"""
 	"""
-	# Convert SBS map
-	cmd, outputDir = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize)
+	# Input
+	cmd, outputDir = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputPath, outputFormat, outputSize)
 	if cmd and outputDir:
 		optPathDict = sbsrender_exec(cmd, outputDir)
 	else:
 		return None
 
-	# Copy normal map
-	index = 0
-	for i, tp in enumerate(texturePath):
-		if 'normal' in os.path.basename(tp).lower():
-			index = i
-	src_normalMap = texturePath[index]
-	dst_normalMap = outputDir + os.sep + os.path.basename(texturePath[index])
-	if outputSize:
-		outputSize = int(outputSize)
-		mTexture.resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
-	else:
-		copyfile(src_normalMap, dst_normalMap)
-	optPathDict['normal'] = [4, dst_normalMap]
+	# Xerox
+	for xerox in xeroxPath:
+		src_normalMap = xeroxPath[xerox]
+		dst_normalMap = outputDir + os.sep + os.path.basename(src_normalMap)
+		if outputSize:
+			outputSize = int(outputSize)
+			mTexture.resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
+		else:
+			copyfile(src_normalMap, dst_normalMap)
+		optPathDict[xerox] = [4, dst_normalMap]
 
 	return optPathDict
 
@@ -290,11 +287,13 @@ def dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDI
 	tick = timerX()
 	shadedItem = []
 	for texture in textureInputSet:
-		inputDir = textureInputSet[texture][0]
+		inputDir = textureInputSet[texture]['root']
 		textureName = texture + sepTYPE
-		texturePath = textureInputSet[texture][2:]
-		outputFormat = textureInputSet[texture][1] if not outputFormat else outputFormat
-		optPathDict = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, texturePath, outputFormat, outputSize)
+		# texturePath
+		inputPath = textureInputSet[texture]['input']
+		xeroxPath = textureInputSet[texture]['xerox']
+		outputFormat = textureInputSet[texture]['ext'] if not outputFormat else outputFormat
+		optPathDict = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputPath, xeroxPath, outputFormat, outputSize)
 		itemName = texture[:-5] if isUDIM else texture
 		# check V-Ray is loaded or not
 		if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):

@@ -326,29 +326,15 @@ def ui_main():
 	sepTYPE_btn.setCommand(partial(sepBtn_Label, sepTYPE_btn))
 
 
-	def scrollList_deselectAll(*args):
-		checkResult_txsc.deselectAll()
-	def scrollList_doubleClick(*args):
-		global textureInputSet
-		item = checkResult_txsc.getSelectItem()
-		if item:
-			print '-'*10
-			print '***  ' + item[0]
-			for i, info in enumerate(textureInputSet[item[0]]):
-				print '[' + str(i) + ']  ' + info
-			warning('SBS2MAYA : Info printed out, Please see scriptEditor.')
-
-	checkResult_txsc.deleteKeyCommand(partial(scrollList_deselectAll))
-	checkResult_txsc.doubleClickCommand(partial(scrollList_doubleClick))
-
-
 	global textureInputSet
 	textureInputSet = {}
 	def checkTextureFile(*args):
 		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
 		sbsarPath = configFile['sbsarLib'] + sbsarFile_menu.getValue()
-		sbsInputType = sbs2maya.load_json(sbsarPath)['input'].keys()
-		print sbsInputType
+		sbaArgs = sbs2maya.load_json(sbsarPath)
+		inputType = sbaArgs['input'].keys()
+		xeroxType = sbaArgs['xerox'].keys()
+
 		inputDir = os.path.abspath(inputDir_textF.getText())
 		dirWalk = walk_mqsb.isChecked()
 		isUDIM = udim_mqsb.isChecked()
@@ -358,7 +344,7 @@ def ui_main():
 		sepTYPE = sepTYPE_btn.getLabel()
 
 		checkResult_txsc.removeAll()
-		#global textureInputSet
+		global textureInputSet
 		textureInputSet = {}
 
 		# grab all files
@@ -376,8 +362,13 @@ def ui_main():
 						fileList.append(f)
 
 		# filter out wont be matched
-		infoBox = []
-		pathDict = {}
+		infoBox = {}
+		infoBox_init = {
+			'root': '',
+			'ext': '',
+			'input': {},
+			'xerox': {}
+			}
 		itemName_currentMatch = ''
 		for f in fileList:
 			fileName = os.path.basename(os.path.splitext(f)[0])
@@ -386,25 +377,54 @@ def ui_main():
 			udimCode = itemName.split(sepUDIM)[-1] if isUDIM else ''
 			if not isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
 				continue
-			if not itemName_currentMatch and not itemName == itemName_currentMatch:
-				if len(infoBox) > 0 and len(infoBox) < 6:
-					infoBox = []
-			if typeName in sbsInputType and (udimCode.isdigit() if isUDIM else True):
-				if typeName == sbsInputType[0] and not infoBox:
-					infoBox.append(os.path.dirname(f))
-					infoBox.append(os.path.splitext(f)[-1][1:])
-					itemName_currentMatch = itemName
-				if len(infoBox) >= 2:
-					infoBox.append(f)
-					print infoBox
-			if len(infoBox) == 6:
+			if infoBox and not itemName_currentMatch and not itemName == itemName_currentMatch:
+				if len(infoBox['input']) < len(inputType) or len(infoBox['xerox']) < len(xeroxType):
+					infoBox = {}
+			if typeName in inputType or typeName in xeroxType:
+				if udimCode.isdigit() if isUDIM else True:
+					if not infoBox:
+						infoBox = infoBox_init
+						infoBox['root'] = os.path.dirname(f)
+						infoBox['ext'] = os.path.splitext(f)[-1][1:]
+						itemName_currentMatch = itemName
+					if infoBox['root'] and infoBox['ext']:
+						if typeName in inputType:
+							infoBox['input'][typeName] = f
+						if typeName in xeroxType:
+							infoBox['xerox'][typeName] = f
+						print infoBox
+			if len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
 				textureInputSet[itemName] = infoBox
-				infoBox = []
+				infoBox = {}
 
 		for item in textureInputSet:
 			checkResult_txsc.append(item)
 
 	checkTexture_btn.setCommand(partial(checkTextureFile))
+
+
+	def scrollList_deselectAll(*args):
+		checkResult_txsc.deselectAll()
+	def scrollList_doubleClick(*args):
+		global textureInputSet
+		item = checkResult_txsc.getSelectItem()
+		if item:
+			print '-'*10
+			print '***  ' + item[0]
+			info = textureInputSet[item[0]]
+			print 'root: 	' + info['root']
+			print 'ext: 	' + info['ext']
+			print 'input:'
+			for i in info['input']:
+				print '		[' + i + ']: ' + info['input'][i]
+			print 'xerox:'
+			for i in info['xerox']:
+				print '		[' + i + ']: ' + info['xerox'][i]
+			warning('SBS2MAYA : Info printed out, Please see scriptEditor.')
+
+	checkResult_txsc.deleteKeyCommand(partial(scrollList_deselectAll))
+	checkResult_txsc.doubleClickCommand(partial(scrollList_doubleClick))
+
 
 	def sendMission(*args):
 		sbsArgsFiles = sbsarFile_menu.getValue()
