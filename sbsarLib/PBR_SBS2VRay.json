@@ -16,8 +16,8 @@
 	"xerox" : { "normal"    : "_outputNodeName_normal_file"
 	},
 	"guide" : {
-		"memory" : 1024,
+		"memory-budget" : "",
 		"engine" : "d3d10pc",
-		"ddsCmp" : "raw"
+		"output-format-compression" : ""
 	}
 }

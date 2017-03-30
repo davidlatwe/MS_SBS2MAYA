@@ -78,20 +78,18 @@ def get_lastStatus():
 	return filePath
 
 
-def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputPath, outputFormat, outputSize):
+def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
 	"""
 	"""
 	configFile = load_json(get_sbsWorkConfigs())
 	sbsrenderPath = configFile['sbsrender']
-	sbsarFile = configFile['sbsarLib'] + sbsArgsFiles
-	sbsrenderArgs = load_json(sbsarFile)
-	sbsarGraph = sbsrenderArgs['graph']
+	sbsArgsFiles = configFile['sbsarLib'] + sbsArgsFiles
+	sbsArgs = load_json(sbsArgsFiles)
+	sbsarGraph = sbsArgs['graph']
+	sbsarFile = os.path.dirname(sbsArgsFiles) + os.sep + sbsArgs['sbsar']
 
-	outputDir = (os.path.dirname(texturePath[0]) + os.sep + 'converted') if not outputDir else outputDir
+	outputDir = (inputDir + os.sep + 'converted') if not outputDir else outputDir
 	outputName = textureName + '{outputNodeName}'
-	input_baseColor = texturePath[0]
-	input_roughness = texturePath[3]
-	input_metallic = texturePath[1]
 
 	if not os.path.exists(sbsrenderPath):
 		warning('sbsrender was not found in this path: ' + sbsrenderPath)
@@ -106,38 +104,52 @@ def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputPath, outputFormat,
 	if outputSize:
 		outputSize = str(len(bin(int(outputSize))[3:]))
 	else:
-		inputsize = mTexture.getTextureRes(input_baseColor)
+		sampleImg = inputPath[sbsArgs['input'].keys()[0]]
+		inputsize = mTexture.getTextureRes(sampleImg)
 		if inputsize is None:
-			error('Can not query texture file resolution: ' + input_baseColor)
+			error('Can not query texture file resolution: ' + sampleImg)
 			return None
 		else:
 			outputSize = str(len(bin(int(inputsize[0]))[3:]))
 
+	graphInput = '' if not sbsarGraph else ('--input-graph "%s" ' % sbsarGraph)
+	entryInput = ''
+	for p in inputPath:
+		entryInput += '--set-entry ' + sbsArgs['input'][p] + '@"' + inputPath[p] + '" '
+	valueInput = ''
+	for v in sbsArgs['value']:
+		if sbsArgs['value'][v]:
+			valueInput += '--' + v + '@' + sbsArgs['value'][v] + ' '
+	guideInput = ''
+	for g in sbsArgs['guide']:
+		if sbsArgs['guide'][g]:
+			guideInput += '--' + g + ' ' + sbsArgs['guide'][g] + ' '
+
 	cmd = '"%s" render ' % sbsrenderPath \
 		+ '--inputs "%s" ' % sbsarFile \
-		+ '--input-graph "%s" ' % sbsarGraph \
-		+ '--set-entry input_baseColor@"%s" ' % input_baseColor \
-		+ '--set-entry input_roughness@"%s" ' % input_roughness \
-		+ '--set-entry input_metallic@"%s" ' % input_metallic \
+		+ graphInput \
+		+ entryInput \
+		+ valueInput \
 		+ '--output-path "%s" ' % outputDir \
 		+ '--output-name "%s" ' % outputName \
 		+ '--output-format "%s" ' % outputFormat \
-		+ '--engine "d3d10pc" ' \
-		+ '--memory-budget 2048 ' \
+		+ guideInput \
 		+ '--set-value $outputsize@' + outputSize + ',' + outputSize
 
-	return cmd, outputDir
+	return cmd, outputDir, sbsArgs
 
 
-def sbsrender_exec(cmd, outputDir):
+def sbsrender_exec(cmd, outputDir, sbsArgs):
 	"""
 	"""
 	if not os.path.exists(outputDir):
 		os.mkdir(outputDir)
-
+	#print cmd
 	process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
 	convertResult, convertError = process.communicate()
 	hasError = None
+	print convertResult
+	print convertError
 
 	def sbsrender_error(msg):
 		"""
@@ -171,43 +183,31 @@ def sbsrender_exec(cmd, outputDir):
 
 	if convertResult:
 		pathCount = 0
-		optPathDict = {
-			'diffuse' : [0, ''],
-			'reflection' : [1, ''],
-			'glossiness' : [2, ''],
-			'ior' : [3, '']
-			}
-		optMsgList = convertResult.split('\r\n')
-		if len(optMsgList) == 6:
-			for channel in optPathDict:
-				i = optPathDict[channel][0]
-				if optMsgList[i + 1].startswith('* Output "%s" saved to:' % channel):
-					optPathDict[channel][1] = optMsgList[i + 1].split('"')[-2]
-					pathCount += 1
+		optPathDict = {}
+		for line in convertResult.split('\r\n'):
+			for key in sbsArgs['yield']:
+				if line.startswith('* Output "%s" saved to:' % key):
+					optPathDict[key] = line.split('"')[-2]
+					break
+		if len(optPathDict) == len(sbsArgs['yield']):
+			return optPathDict
 		else:
 			# ERROR
-			sbsrender_error('Strange error, sbsrender result message\'s length was not matched. See scriptEditor for more info')
+			sbsrender_error('Strange error, the number of exported channels was not matched. See scriptEditor for more info')
 			return None
 	else:
 		# ERROR
 		sbsrender_error('Fatal Error, sbsrender not working. See scriptEditor for more info')
 		return None
 
-	if pathCount == 4:
-		return optPathDict
-	else:
-		# ERROR
-		sbsrender_error('Strange error, the number of exported channels was not 4. See scriptEditor for more info')
-		return None
 
-
-def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputPath, xeroxPath, outputFormat, outputSize):
+def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
 	"""
 	"""
 	# Input
-	cmd, outputDir = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputPath, outputFormat, outputSize)
-	if cmd and outputDir:
-		optPathDict = sbsrender_exec(cmd, outputDir)
+	cmd, outputDir, sbsArgs = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
+	if cmd and outputDir and sbsArgs:
+		optPathDict = sbsrender_exec(cmd, outputDir, sbsArgs)
 	else:
 		return None
 
@@ -220,14 +220,19 @@ def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputPath, xeroxPath,
 			mTexture.resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
 		else:
 			copyfile(src_normalMap, dst_normalMap)
-		optPathDict[xerox] = [4, dst_normalMap]
+		optPathDict[xerox] = dst_normalMap.replace('\\', '/')
 
-	return optPathDict
+	return optPathDict, sbsArgs
 
 
-def buildShadingNetwork(optPathDict, itemName, isUDIM):
+def buildShadingNetwork(optPathDict, sbsArgs, itemName, isUDIM):
 	"""
 	"""
+	# need use namespace if import ma file ########################
+	# need return fileNodes if using python script ################
+
+	# ##############################
+	# make indpendent script input: (itemName, isUDIM)
 	shadingNodesList = []
 	sbsvmtlNodesList = []
 
@@ -257,9 +262,12 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 	gloTex, gloPlc = mShading.createFileTexture(itemName + '_glossiness_file', itemName + '_glossiness_p2d')
 	iorTex, iorPlc = mShading.createFileTexture(itemName + '_ior_file', itemName + '_ior_p2d')
 	norTex, norPlc = mShading.createFileTexture(itemName + '_normal_file', itemName + '_normal_p2d')
-	
-	shadingNodesList.extend(
-		[difTex, difPlc, refTex, refPlc, gloTex, gloPlc, iorTex, iorPlc, norTex, norPlc])
+
+	for tex in [difTex, refTex, gloTex, iorTex, norTex]:
+		tex.filterType.set(0)
+		tex.uvTilingMode.set(3 if isUDIM else 0)
+		mVRay.setVrayTextureFilter(tex, 1)
+		mVRay.setVrayTextureGamma(tex, 2 if tex in [difTex, refTex] else 0)
 
 	difTex.outColor.connect(baseShd.diffuseColor)
 	refTex.outColor.connect(specShd.reflectionColor)
@@ -268,17 +276,18 @@ def buildShadingNetwork(optPathDict, itemName, isUDIM):
 	norTex.outColor.connect(baseShd.bumpMap)
 	norTex.outColor.connect(specShd.bumpMap)
 
+	shadingNodesList.extend(
+		[difTex, difPlc, refTex, refPlc, gloTex, gloPlc, iorTex, iorPlc, norTex, norPlc])
+
+	mShading.dumpToBin(sbsvmtlNodesList, 'SBS_main')
+	mShading.dumpToBin(shadingNodesList, 'SBS_element')
+	# make indpendent script output: (fileNodes)
+	# ##############################
+
 	for channel in optPathDict:
 		i = optPathDict[channel][0]
 		tex = [difTex, refTex, gloTex, iorTex, norTex][i]
 		tex.fileTextureName.set(optPathDict[channel][1])
-		tex.filterType.set(0)
-		tex.uvTilingMode.set(3 if isUDIM else 0)
-		mVRay.setVrayTextureFilter(tex, 1)
-		mVRay.setVrayTextureGamma(tex, 2 if tex in [difTex, refTex] else 0)
-
-	mShading.dumpToBin(sbsvmtlNodesList, 'SBS_main')
-	mShading.dumpToBin(shadingNodesList, 'SBS_element')
 
 
 def dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
@@ -293,19 +302,22 @@ def dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDI
 		inputPath = textureInputSet[texture]['input']
 		xeroxPath = textureInputSet[texture]['xerox']
 		outputFormat = textureInputSet[texture]['ext'] if not outputFormat else outputFormat
-		optPathDict = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputPath, xeroxPath, outputFormat, outputSize)
+		optPathDict, sbsArgs = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputDir,
+			inputPath, xeroxPath, outputFormat, outputSize)
 		itemName = texture[:-5] if isUDIM else texture
+		
 		# check V-Ray is loaded or not
-		if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
-			try:
-				loadPlugin('vrayformaya', qt= 1)
-			except Exception, e:
-				warning('---------------------')
-				print e
-				error('Failed to load V-Ray.')
-				buildShad = False
+		# if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
+		# 	try:
+		# 		loadPlugin('vrayformaya', qt= 1)
+		# 	except Exception, e:
+		# 		warning('---------------------')
+		# 		print e
+		# 		error('Failed to load V-Ray.')
+		# 		buildShad = False
+		
 		# build shad
 		if not itemName in shadedItem and buildShad and optPathDict is not None:
-			buildShadingNetwork(optPathDict, itemName, isUDIM)
+			buildShadingNetwork(optPathDict, sbsArgs, itemName, isUDIM)
 		shadedItem.append(itemName)
 	print 'Job Time: ' + str(timerX(st= tick))

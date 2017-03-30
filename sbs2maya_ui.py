@@ -392,7 +392,6 @@ def ui_main():
 							infoBox['input'][typeName] = f
 						if typeName in xeroxType:
 							infoBox['xerox'][typeName] = f
-						print infoBox
 			if len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
 				textureInputSet[itemName] = infoBox
 				infoBox = {}
