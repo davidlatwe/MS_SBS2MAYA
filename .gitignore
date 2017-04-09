@@ -9,6 +9,9 @@ __pycache__/
 # Maya
 .mayaSwatches/
 
+# vscode
+.vscode/
+
 # Distribution / packaging
 .Python
 env/

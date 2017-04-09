@@ -30,25 +30,27 @@ if about(li= True):
 if about(win= True):
 	height_offset = 3
 
+sbsrender = sbs2maya.Sbsrender()
+
 
 def ui_settings():
 	"""
 	"""
-	configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+	workConfig = sbsrender.workConfig
 	if columnLayout(column_settings, q= 1, ex= 1):
 		deleteUI(column_settings)
 	columnLayout(column_settings, adj= 1, cal= 'left', p= column_main)
 
 	text(l= '  - Sbsrender App Path')
 	rowLayout(nc= 1, adj= 1)
-	renP_text = textField(text= configFile['sbsrender'])
+	renP_text = textField(text= workConfig['sbsrender'])
 	setParent('..')
 
 	text(l= '', h= 2)
 
 	text(l= '  - Converter Lib Path')
 	rowLayout(nc= 1, adj= 1)
-	sLib_text = textField(text= configFile['sbsarLib'])
+	sLib_text = textField(text= workConfig['sbsarLib'])
 	setParent('..')
 
 	text(l= '', h= 2)
@@ -58,7 +60,7 @@ def ui_settings():
 	rowLayout(nc= 2, adj= 2)
 	text(l= '', w= 1)
 	stA= columnLayout()
-	save_mqsb = mqsb.SwitchBox(onl= 'YES', ofl= 'NO', w= 130, h= 25, v= configFile['saveLast'], p= stA)
+	save_mqsb = mqsb.SwitchBox(onl= 'YES', ofl= 'NO', w= 130, h= 25, v= workConfig['saveLast'], p= stA)
 	setParent('..')
 	setParent('..')
 
@@ -72,11 +74,11 @@ def ui_settings():
 	setParent('..')
 
 	def saveConfigs(*args):
-		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
-		configFile['sbsrender'] = renP_text.getText()
-		configFile['sbsarLib'] = sLib_text.getText()
-		configFile['saveLast'] = save_mqsb.isChecked()
-		sbs2maya.save_json(sbs2maya.get_sbsWorkConfigs(), configFile)
+		workConfig = sbsrender.workConfig
+		workConfig['sbsrender'] = renP_text.getText()
+		workConfig['sbsarLib'] = sLib_text.getText()
+		workConfig['saveLast'] = save_mqsb.isChecked()
+		sbsrender.set_sbsWorkConfigs(workConfig)
 
 	sFig_btn.setCommand(saveConfigs)
 
@@ -269,12 +271,12 @@ def ui_main():
 
 
 	def listSbsrenderArgsFiles(*args):
-		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
+		workConfig = sbsrender.workConfig
 		sbsarFile_menu.clear()
-		for root, dirs, files in os.walk(configFile['sbsarLib']):
+		for root, dirs, files in os.walk(workConfig['sbsarLib']):
 			for f in files:
 				if f.endswith(".json"):
-					fileName = os.path.join(root, f).split(configFile['sbsarLib'])[-1]
+					fileName = os.path.join(root, f).split(workConfig['sbsarLib'])[-1]
 					menuItem(fileName, p= sbsarFile_menu)
 
 	sbsarFile_menu.beforeShowPopup(listSbsrenderArgsFiles)
@@ -329,8 +331,8 @@ def ui_main():
 	global textureInputSet
 	textureInputSet = {}
 	def checkTextureFile(*args):
-		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
-		sbsarPath = configFile['sbsarLib'] + sbsarFile_menu.getValue()
+		workConfig = sbsrender.workConfig
+		sbsarPath = workConfig['sbsarLib'] + sbsarFile_menu.getValue()
 		sbaArgs = sbs2maya.load_json(sbsarPath)
 		inputType = sbaArgs['input'].keys()
 		xeroxType = sbaArgs['xerox'].keys()
@@ -451,41 +453,41 @@ def ui_main():
 	sendMission_btn.setCommand(partial(sendMission))
 
 	def saveLastStatus(*args):
-		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
-		if configFile['saveLast']:
-			settings = sbs2maya.load_json(sbs2maya.get_lastStatus())
-			settings['inputPath'] = inputDir_textF.getText()
-			settings['outputPath'] = outputDir_textF.getText()
-			settings['walkSub'] = walk_mqsb.isChecked()
-			settings['udim_uv'] = udim_mqsb.isChecked()
-			settings['sep_name'] = sepUDIM_btn.getLabel()
-			settings['sep_udim'] = sepTYPE_btn.getLabel()
-			settings['img_type'] = inputExt_menu.getValue()
-			settings['hide_udim'] = hide_mqsb.isChecked()
-			settings['selected'] = selt_mqsb.isChecked()
-			settings['buildShd'] = shad_mqsb.isChecked()
-			settings['outFormat'] = outputExt_menu.getValue()
-			settings['outSize'] = outputSiz_menu.getValue()
-			sbs2maya.save_json(sbs2maya.get_lastStatus(), settings)
+		workConfig = sbsrender.workConfig
+		if workConfig['saveLast']:
+			lastStatus = sbsrender.lastStatus
+			lastStatus['inputPath'] = inputDir_textF.getText()
+			lastStatus['outputPath'] = outputDir_textF.getText()
+			lastStatus['walkSub'] = walk_mqsb.isChecked()
+			lastStatus['udim_uv'] = udim_mqsb.isChecked()
+			lastStatus['sep_name'] = sepUDIM_btn.getLabel()
+			lastStatus['sep_udim'] = sepTYPE_btn.getLabel()
+			lastStatus['img_type'] = inputExt_menu.getValue()
+			lastStatus['hide_udim'] = hide_mqsb.isChecked()
+			lastStatus['selected'] = selt_mqsb.isChecked()
+			lastStatus['buildShd'] = shad_mqsb.isChecked()
+			lastStatus['outFormat'] = outputExt_menu.getValue()
+			lastStatus['outSize'] = outputSiz_menu.getValue()
+			sbsrender.set_lastStatus(lastStatus)
 
 	window(windowName, e= 1, w= windowWidth, h= height_workArea, cc= saveLastStatus)
 
 	def restoreLastStatus():
-		configFile = sbs2maya.load_json(sbs2maya.get_sbsWorkConfigs())
-		if configFile['saveLast']:
-			settings = sbs2maya.load_json(sbs2maya.get_lastStatus())
-			inputDir_textF.setText(settings['inputPath'])
-			outputDir_textF.setText(settings['outputPath'])
-			walk_mqsb.setChecked(settings['walkSub'])
-			udim_mqsb.setChecked(settings['udim_uv'])
-			sepUDIM_btn.setLabel(settings['sep_name'])
-			sepTYPE_btn.setLabel(settings['sep_udim'])
-			inputExt_menu.setValue(settings['img_type'])
-			hide_mqsb.setChecked(settings['hide_udim'])
-			selt_mqsb.setChecked(settings['selected'])
-			shad_mqsb.setChecked(settings['buildShd'])
-			outputExt_menu.setValue(settings['outFormat'])
-			outputSiz_menu.setValue(settings['outSize'])
+		workConfig = sbsrender.workConfig
+		if workConfig['saveLast']:
+			lastStatus = sbsrender.lastStatus
+			inputDir_textF.setText(lastStatus['inputPath'])
+			outputDir_textF.setText(lastStatus['outputPath'])
+			walk_mqsb.setChecked(lastStatus['walkSub'])
+			udim_mqsb.setChecked(lastStatus['udim_uv'])
+			sepUDIM_btn.setLabel(lastStatus['sep_name'])
+			sepTYPE_btn.setLabel(lastStatus['sep_udim'])
+			inputExt_menu.setValue(lastStatus['img_type'])
+			hide_mqsb.setChecked(lastStatus['hide_udim'])
+			selt_mqsb.setChecked(lastStatus['selected'])
+			shad_mqsb.setChecked(lastStatus['buildShd'])
+			outputExt_menu.setValue(lastStatus['outFormat'])
+			outputSiz_menu.setValue(lastStatus['outSize'])
 	
 	restoreLastStatus()
 
