@@ -60,7 +60,12 @@ class Sbsrender():
 		# dynamic
 		self.workConfig = {}
 		self.lastStatus = {}
+		self.sbsArgsFile = ''
 		self.sbsArgs = {}
+		self.imgInputSet = {}
+		self.isUDIM = False
+		self.sepUDIM = ''
+		self.sepTYPE = ''
 		# init
 		## init configFile
 		if not os.path.exists(self.configFile):
@@ -80,16 +85,19 @@ class Sbsrender():
 		""" docstring """
 		self.lastStatus = lastStatus
 		_save_json(self.statusFile, lastStatus)
+	
+	def get_sbsArgs(self):
+		""" docstring """
+		self.sbsArgs = _load_json(self.workConfig['sbsarLib'] + self.sbsArgsFile)
+		return self.sbsArgs
 
-	def sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
+	def sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
 		"""
 		"""
 		workConfig = self.workConfig
 		sbsrenderPath = workConfig['sbsrender']
-		sbsArgsFiles = workConfig['sbsarLib'] + sbsArgsFiles
-		sbsArgs = load_json(sbsArgsFiles)
-		sbsarGraph = sbsArgs['graph']
-		sbsarFile = os.path.dirname(sbsArgsFiles) + os.sep + sbsArgs['sbsar']
+		sbsarGraph = self.sbsArgs['graph']
+		sbsarFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
 
 		outputDir = (inputDir + os.sep + 'converted') if not outputDir else outputDir
 		outputName = textureName + '{outputNodeName}'
@@ -107,7 +115,7 @@ class Sbsrender():
 		if outputSize:
 			outputSize = str(len(bin(int(outputSize))[3:]))
 		else:
-			sampleImg = inputPath[sbsArgs['input'].keys()[0]]
+			sampleImg = inputPath[self.sbsArgs['input'].keys()[0]]
 			inputsize = mTexture.getTextureRes(sampleImg)
 			if inputsize is None:
 				error('Can not query texture file resolution: ' + sampleImg)
@@ -118,15 +126,15 @@ class Sbsrender():
 		graphInput = '' if not sbsarGraph else ('--input-graph "%s" ' % sbsarGraph)
 		entryInput = ''
 		for p in inputPath:
-			entryInput += '--set-entry ' + sbsArgs['input'][p] + '@"' + inputPath[p] + '" '
+			entryInput += '--set-entry ' + self.sbsArgs['input'][p] + '@"' + inputPath[p] + '" '
 		valueInput = ''
-		for v in sbsArgs['value']:
-			if sbsArgs['value'][v]:
-				valueInput += '--' + v + '@' + sbsArgs['value'][v] + ' '
+		for v in self.sbsArgs['value']:
+			if self.sbsArgs['value'][v]:
+				valueInput += '--' + v + '@' + self.sbsArgs['value'][v] + ' '
 		guideInput = ''
-		for g in sbsArgs['guide']:
-			if sbsArgs['guide'][g]:
-				guideInput += '--' + g + ' ' + sbsArgs['guide'][g] + ' '
+		for g in self.sbsArgs['guide']:
+			if self.sbsArgs['guide'][g]:
+				guideInput += '--' + g + ' ' + self.sbsArgs['guide'][g] + ' '
 
 		cmd = '"%s" render ' % sbsrenderPath \
 			+ '--inputs "%s" ' % sbsarFile \
@@ -139,10 +147,10 @@ class Sbsrender():
 			+ guideInput \
 			+ '--set-value $outputsize@' + outputSize + ',' + outputSize
 
-		return cmd, outputDir, sbsArgs
+		return cmd, outputDir
 
 
-	def sbsrender_exec(cmd, outputDir, sbsArgs):
+	def sbsrender_exec(cmd, outputDir):
 		"""
 		[var] optPathDict : sbsrender output name and output file path
 		"""
@@ -189,11 +197,11 @@ class Sbsrender():
 			pathCount = 0
 			optPathDict = {}
 			for line in convertResult.split('\r\n'):
-				for key in sbsArgs['yield']:
+				for key in self.sbsArgs['yield']:
 					if line.startswith('* Output "%s" saved to:' % key):
 						optPathDict[key] = line.split('"')[-2]
 						break
-			if len(optPathDict) == len(sbsArgs['yield']):
+			if len(optPathDict) == len(self.sbsArgs['yield']):
 				return optPathDict
 			else:
 				# ERROR
@@ -205,13 +213,13 @@ class Sbsrender():
 			return None
 
 
-	def sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
+	def sbs2maya_convert(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
 		"""
 		"""
 		# Input
-		cmd, outputDir, sbsArgs = sbsrender_cmd(sbsArgsFiles, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
-		if cmd and outputDir and sbsArgs:
-			optPathDict = sbsrender_exec(cmd, outputDir, sbsArgs)
+		cmd, outputDir = sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
+		if cmd and outputDir and self.sbsArgs:
+			optPathDict = sbsrender_exec(cmd, outputDir)
 		else:
 			return None
 
@@ -226,12 +234,14 @@ class Sbsrender():
 				copyfile(src_normalMap, dst_normalMap)
 			optPathDict[xerox] = dst_normalMap.replace('\\', '/')
 
-		return optPathDict, sbsArgs
+		return optPathDict
 
 
-	def buildShadingNetwork(optPathDict, sbsArgs, itemName, isUDIM):
+	def buildShadingNetwork(optPathDict, itemName):
 		"""
 		"""
+		sbsArgs = self.sbsArgs
+		isUDIM = self.isUDIM
 		# need use namespace if import ma file ########################
 		shadingFile = ''
 		importFile(shadingFile, namespace= '__MS_SBS2MAYA_WIP__')
@@ -242,21 +252,21 @@ class Sbsrender():
 			tex.fileTextureName.set(optPathDict[channel][1])
 
 
-	def dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM, buildShad, outputDir):
+	def dist(outputFormat, outputSize, buildShad, outputDir):
 		"""
 		"""
 		tick = timerX()
 		shadedItem = []
-		for texture in textureInputSet:
-			inputDir = textureInputSet[texture]['root']
-			textureName = texture + sepTYPE
+		for texture in self.imgInputSet:
+			inputDir = self.imgInputSet[texture]['root']
+			textureName = texture + self.sepTYPE
 			# texturePath
-			inputPath = textureInputSet[texture]['input']
-			xeroxPath = textureInputSet[texture]['xerox']
-			outputFormat = textureInputSet[texture]['ext'] if not outputFormat else outputFormat
-			optPathDict, sbsArgs = sbs2maya_convert(sbsArgsFiles, outputDir, textureName, inputDir,
+			inputPath = self.imgInputSet[texture]['input']
+			xeroxPath = self.imgInputSet[texture]['xerox']
+			outputFormat = self.imgInputSet[texture]['ext'] if not outputFormat else outputFormat
+			optPathDict = sbs2maya_convert(outputDir, textureName, inputDir,
 				inputPath, xeroxPath, outputFormat, outputSize)
-			itemName = texture[:-5] if isUDIM else texture
+			itemName = texture[:-5] if self.isUDIM else texture
 			
 			# check V-Ray is loaded or not
 			# if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
@@ -270,6 +280,6 @@ class Sbsrender():
 			
 			# build shad
 			if not itemName in shadedItem and buildShad and optPathDict is not None:
-				buildShadingNetwork(optPathDict, sbsArgs, itemName, isUDIM)
+				buildShadingNetwork(optPathDict, itemName)
 			shadedItem.append(itemName)
 		print 'Job Time: ' + str(timerX(st= tick))

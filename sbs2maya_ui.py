@@ -23,8 +23,8 @@ column_main = windowName + '_main_column'
 column_workArea = windowName + '_workArea_column'
 column_settings = windowName + '_settings_column'
 windowWidth = 320
-height_workArea = 615
-height_settings = 226
+height_workArea = 628
+height_settings = 229
 if about(li= True):
 	height_offset = 1
 if about(win= True):
@@ -124,15 +124,6 @@ def ui_main():
 	rowLayout(nc= 2, adj= 1)
 	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
-	setParent('..')
-
-	text(l= '', h= 2)
-
-	text(l= '  - Output Folder Path')
-
-	rowLayout(nc= 2, adj= 1)
-	outputDir_textF = textField(text= '')
-	ocBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
 
 	rowLayout(nc= 3, adj= 1, cl2= ['left', 'left'])
@@ -242,8 +233,18 @@ def ui_main():
 		menuItem(siz)
 	text(l= '', w= 3)
 	setParent('..')
-	
+
 	text(l= '', h= 6)
+	text(l= '  - Output Folder Path')
+	text(l= '', h= 2)
+	rowLayout(nc= 2, adj= 1)
+	outputDir_textF = textField(text= '')
+	ocBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
+	setParent('..')
+
+	text(l= '', h= 8)
+	separator()
+	text(l= '', h= 2)
 	rowLayout(nc= 3, adj= 2)
 	text(l= '', w= 1)
 	sendMission_btn = button(l= 'Start Process', h= 40)
@@ -328,26 +329,25 @@ def ui_main():
 	sepTYPE_btn.setCommand(partial(sepBtn_Label, sepTYPE_btn))
 
 
-	global textureInputSet
-	textureInputSet = {}
 	def checkTextureFile(*args):
+		sbsrender.sbsArgsFile = sbsarFile_menu.getValue()
+		sbsrender.isUDIM = udim_mqsb.isChecked()
+		sbsrender.sepUDIM = sepUDIM_btn.getLabel()
+		sbsrender.sepTYPE = sepTYPE_btn.getLabel()
+
 		workConfig = sbsrender.workConfig
-		sbsarPath = workConfig['sbsarLib'] + sbsarFile_menu.getValue()
-		sbaArgs = sbs2maya.load_json(sbsarPath)
+		sbaArgs = sbsrender.get_sbsArgs()
 		inputType = sbaArgs['input'].keys()
 		xeroxType = sbaArgs['xerox'].keys()
 
 		inputDir = os.path.abspath(inputDir_textF.getText())
 		dirWalk = walk_mqsb.isChecked()
-		isUDIM = udim_mqsb.isChecked()
 		extType = inputExt_menu.getValue()
 		extType = '' if extType == '. ***' else extType
-		sepUDIM = sepUDIM_btn.getLabel()
-		sepTYPE = sepTYPE_btn.getLabel()
 
 		checkResult_txsc.removeAll()
-		global textureInputSet
-		textureInputSet = {}
+
+		sbsrender.imgInputSet = {}
 
 		# grab all files
 		fileList = []
@@ -372,7 +372,7 @@ def ui_main():
 			'xerox': {}
 			}
 		itemName_currentMatch = ''
-		for f in fileList:
+		for f in sorted(fileList):
 			fileName = os.path.basename(os.path.splitext(f)[0])
 			typeName = fileName.split(sepTYPE)[-1].lower()
 			itemName = fileName[:-(len(typeName) + 1)]
@@ -395,10 +395,10 @@ def ui_main():
 						if typeName in xeroxType:
 							infoBox['xerox'][typeName] = f
 			if len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
-				textureInputSet[itemName] = infoBox
+				sbsrender.imgInputSet[itemName] = infoBox
 				infoBox = {}
 
-		for item in textureInputSet:
+		for item in sbsrender.imgInputSet:
 			checkResult_txsc.append(item)
 
 	checkTexture_btn.setCommand(partial(checkTextureFile))
@@ -407,12 +407,11 @@ def ui_main():
 	def scrollList_deselectAll(*args):
 		checkResult_txsc.deselectAll()
 	def scrollList_doubleClick(*args):
-		global textureInputSet
 		item = checkResult_txsc.getSelectItem()
 		if item:
 			print '-'*10
 			print '***  ' + item[0]
-			info = textureInputSet[item[0]]
+			info = sbsrender.imgInputSet[item[0]]
 			print 'root: 	' + info['root']
 			print 'ext: 	' + info['ext']
 			print 'input:'
@@ -428,13 +427,10 @@ def ui_main():
 
 
 	def sendMission(*args):
-		sbsArgsFiles = sbsarFile_menu.getValue()
 		outputFormat = outputExt_menu.getValue()
 		outputFormat = '' if outputFormat == '{ As is }' else outputFormat
 		outputSize = outputSiz_menu.getValue()
 		outputSize = '' if outputSize == '{ As is }' else outputSize
-		isUDIM = udim_mqsb.isChecked()
-		sepTYPE = sepTYPE_btn.getLabel()
 		buildShad = shad_mqsb.isChecked()
 		outputDirTF = outputDir_textF.getText()
 		outputDir = os.path.abspath(outputDirTF) if outputDirTF else ''
@@ -443,10 +439,9 @@ def ui_main():
 			allItems = checkResult_txsc.getAllItems()
 			for item in allItems:
 				if not item in selectedItem:
-					textureInputSet.pop(item, None)
-		if textureInputSet:
-			sbs2maya.dist(sbsArgsFiles, textureInputSet, outputFormat, outputSize, sepTYPE, isUDIM,
-				buildShad, outputDir)
+					sbsrender.imgInputSet.pop(item, None)
+		if sbsrender.imgInputSet:
+			sbs2maya.dist(outputFormat, outputSize, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 
