@@ -374,16 +374,16 @@ def ui_main():
 		itemName_currentMatch = ''
 		for f in sorted(fileList):
 			fileName = os.path.basename(os.path.splitext(f)[0])
-			typeName = fileName.split(sepTYPE)[-1].lower()
+			typeName = fileName.split(sbsrender.sepTYPE)[-1].lower()
 			itemName = fileName[:-(len(typeName) + 1)]
-			udimCode = itemName.split(sepUDIM)[-1] if isUDIM else ''
-			if not isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
+			udimCode = itemName.split(sbsrender.sepUDIM)[-1] if sbsrender.isUDIM else ''
+			if not sbsrender.isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
 				continue
 			if infoBox and not itemName_currentMatch and not itemName == itemName_currentMatch:
 				if len(infoBox['input']) < len(inputType) or len(infoBox['xerox']) < len(xeroxType):
 					infoBox = {}
 			if typeName in inputType or typeName in xeroxType:
-				if udimCode.isdigit() if isUDIM else True:
+				if udimCode.isdigit() if sbsrender.isUDIM else True:
 					if not infoBox:
 						infoBox = infoBox_init
 						infoBox['root'] = os.path.dirname(f)
@@ -441,7 +441,7 @@ def ui_main():
 				if not item in selectedItem:
 					sbsrender.imgInputSet.pop(item, None)
 		if sbsrender.imgInputSet:
-			sbs2maya.dist(outputFormat, outputSize, buildShad, outputDir)
+			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 

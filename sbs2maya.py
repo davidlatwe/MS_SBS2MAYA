@@ -79,7 +79,7 @@ class Sbsrender():
 	def set_sbsWorkConfigs(self, workConfig):
 		""" docstring """
 		self.workConfig = workConfig
-		_save_json(self.configFile, )
+		_save_json(self.configFile, workConfig)
 
 	def set_lastStatus(self, lastStatus):
 		""" docstring """
@@ -88,26 +88,21 @@ class Sbsrender():
 	
 	def get_sbsArgs(self):
 		""" docstring """
-		self.sbsArgs = _load_json(self.workConfig['sbsarLib'] + self.sbsArgsFile)
+		self.sbsArgsFile = self.workConfig['sbsarLib'] + self.sbsArgsFile
+		self.sbsArgs = _load_json(self.sbsArgsFile)
 		return self.sbsArgs
 
-	def sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
-		"""
-		"""
+	def sbsrender_cmd(self, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
+		""" docstring """
 		workConfig = self.workConfig
 		sbsrenderPath = workConfig['sbsrender']
 		sbsarGraph = self.sbsArgs['graph']
 		sbsarFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
-
-		outputDir = (inputDir + os.sep + 'converted') if not outputDir else outputDir
 		outputName = textureName + '{outputNodeName}'
 
 		if not os.path.exists(sbsrenderPath):
-			warning('sbsrender was not found in this path: ' + sbsrenderPath)
-			sbsrenderPath = sbsrenderPath.replace('5', '6')
-			if not os.path.exists(sbsrenderPath):
-				error('sbsrender was not found in this path: ' + sbsrenderPath)
-				return None
+			error('sbsrender was not found in this path: ' + sbsrenderPath)
+			return None
 		if not os.path.exists(sbsarFile):
 			error('sbsar file was not found in this path: ' + sbsarFile)
 			return None
@@ -146,16 +141,17 @@ class Sbsrender():
 			+ '--output-format "%s" ' % outputFormat \
 			+ guideInput \
 			+ '--set-value $outputsize@' + outputSize + ',' + outputSize
+		
+		if not os.path.exists(outputDir):
+			os.mkdir(outputDir)
 
-		return cmd, outputDir
+		return cmd
 
 
-	def sbsrender_exec(cmd, outputDir):
+	def sbsrender_exec(self, cmd):
 		"""
 		[var] optPathDict : sbsrender output name and output file path
 		"""
-		if not os.path.exists(outputDir):
-			os.mkdir(outputDir)
 		#print cmd
 		process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
 		convertResult, convertError = process.communicate()
@@ -213,15 +209,12 @@ class Sbsrender():
 			return None
 
 
-	def sbs2maya_convert(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
-		"""
-		"""
+	def sbs2maya_convert(self, outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
+		""" docstring """
+		outputDir = (inputDir + os.sep + 'converted') if not outputDir else outputDir
 		# Input
-		cmd, outputDir = sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
-		if cmd and outputDir and self.sbsArgs:
-			optPathDict = sbsrender_exec(cmd, outputDir)
-		else:
-			return None
+		cmd = self.sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
+		optPathDict = self.sbsrender_exec(cmd)
 
 		# Xerox
 		for xerox in xeroxPath:
@@ -237,9 +230,8 @@ class Sbsrender():
 		return optPathDict
 
 
-	def buildShadingNetwork(optPathDict, itemName):
-		"""
-		"""
+	def buildShadingNetwork(self, optPathDict, itemName):
+		""" docstring """
 		sbsArgs = self.sbsArgs
 		isUDIM = self.isUDIM
 		# need use namespace if import ma file ########################
@@ -252,9 +244,8 @@ class Sbsrender():
 			tex.fileTextureName.set(optPathDict[channel][1])
 
 
-	def dist(outputFormat, outputSize, buildShad, outputDir):
-		"""
-		"""
+	def dist(self, outputFormat, outputSize, buildShad, outputDir):
+		""" docstring """
 		tick = timerX()
 		shadedItem = []
 		for texture in self.imgInputSet:
@@ -264,7 +255,7 @@ class Sbsrender():
 			inputPath = self.imgInputSet[texture]['input']
 			xeroxPath = self.imgInputSet[texture]['xerox']
 			outputFormat = self.imgInputSet[texture]['ext'] if not outputFormat else outputFormat
-			optPathDict = sbs2maya_convert(outputDir, textureName, inputDir,
+			optPathDict = self.sbs2maya_convert(outputDir, textureName, inputDir,
 				inputPath, xeroxPath, outputFormat, outputSize)
 			itemName = texture[:-5] if self.isUDIM else texture
 			
@@ -280,6 +271,6 @@ class Sbsrender():
 			
 			# build shad
 			if not itemName in shadedItem and buildShad and optPathDict is not None:
-				buildShadingNetwork(optPathDict, itemName)
+				self.buildShadingNetwork(optPathDict, itemName)
 			shadedItem.append(itemName)
 		print 'Job Time: ' + str(timerX(st= tick))
