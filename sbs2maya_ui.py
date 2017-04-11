@@ -4,9 +4,11 @@ Created on 2016.12.30
 
 @author: davidpower
 '''
-from pymel.core import *
-from functools import partial
 import os
+from functools import partial
+
+from pymel.core import *
+
 import mQtGui; reload(mQtGui)
 import mQtGui.muiSwitchBox as mqsb; reload(mqsb)
 import mQtGui.mGetQt as mqt; reload(mqt)

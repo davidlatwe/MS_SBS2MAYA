@@ -4,27 +4,75 @@ Created on 2016.12.30
 
 @author: davidpower
 '''
-from pymel.core import *
-from subprocess import Popen, PIPE
-from shutil import copyfile
-import mMaya; reload(mMaya)
-import mMaya.mTexture as mTexture; reload(mTexture)
 import json
-import os
+import os, sys
+from shutil import copyfile
+from subprocess import PIPE, Popen
+
+import maya.OpenMaya as om
+
+if not __name__ == '__main__':
+	from pymel.core import *
 
 
 def _load_json(jsonPath):
-	"""
-	"""
+	""" docstring """
 	with open(jsonPath) as jsonFile:
 		return json.load(jsonFile)
 
 
 def _save_json(jsonPath, dictData):
-	"""
-	"""
+	""" docstring """
 	with open(jsonPath, 'w') as jsonFile:
 		json.dump(dictData, jsonFile, indent=4)
+
+
+def _getTextureRes(imgPath):
+	""" docstring """
+	utilWidth = om.MScriptUtil()
+	utilWidth.createFromInt(0)
+	ptrWidth = utilWidth.asUintPtr()
+	utilHeight = om.MScriptUtil()
+	utilHeight.createFromInt(0)
+	ptrHeight = utilHeight.asUintPtr()
+	try:
+		textureFile = om.MImage()
+		textureFile.readFromFile ( imgPath )
+		textureFile.getSize(ptrWidth, ptrHeight)
+		width = om.MScriptUtil.getUint(ptrWidth)
+		height = om.MScriptUtil.getUint(ptrHeight)
+		return width, height
+	except:
+		warning( 'Texture Res error: ' + imgPath )
+		return None
+
+
+def _resizeTexture(imgPath, newPath, imgSize, preserveAspectRatio= True):
+	""" docstring """
+	try:
+		textureFile = om.MImage()
+		textureFile.readFromFile(imgPath)
+		textureFile.resize(imgSize[0], imgSize[1], preserveAspectRatio)
+		textureFile.writeToFile(newPath, newPath.split('.')[-1])
+	except Exception, e:
+		warning('image file resize error: ' + imgPath)
+		print e
+		error('Failed resize image to: ' + newPath)
+
+
+def xeroxInputs(xeroxPath, outputDir, outputSize):
+	""" docstring """
+	optPathDict = {}
+	for xerox in xeroxPath:
+		src_normalMap = xeroxPath[xerox]
+		dst_normalMap = outputDir + os.sep + os.path.basename(src_normalMap)
+		if outputSize:
+			outputSize = int(outputSize)
+			_resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
+		else:
+			copyfile(src_normalMap, dst_normalMap)
+		optPathDict[xerox] = dst_normalMap.replace('\\', '/')
+	print optPathDict
 
 
 class Sbsrender():
@@ -111,7 +159,7 @@ class Sbsrender():
 			outputSize = str(len(bin(int(outputSize))[3:]))
 		else:
 			sampleImg = inputPath[self.sbsArgs['input'].keys()[0]]
-			inputsize = mTexture.getTextureRes(sampleImg)
+			inputsize = _getTextureRes(sampleImg)
 			if inputsize is None:
 				error('Can not query texture file resolution: ' + sampleImg)
 				return None
@@ -217,15 +265,14 @@ class Sbsrender():
 		optPathDict = self.sbsrender_exec(cmd)
 
 		# Xerox
-		for xerox in xeroxPath:
-			src_normalMap = xeroxPath[xerox]
-			dst_normalMap = outputDir + os.sep + os.path.basename(src_normalMap)
-			if outputSize:
-				outputSize = int(outputSize)
-				mTexture.resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
-			else:
-				copyfile(src_normalMap, dst_normalMap)
-			optPathDict[xerox] = dst_normalMap.replace('\\', '/')
+		mayapyEXE = os.environ['MAYA_LOCATION'] + '/bin/mayapy.exe'
+		process = Popen([mayapyEXE, __file__, str(xeroxPath), outputDir, outputSize], shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+		convertResult, convertError = process.communicate()
+		hasError = None
+		#print convertResult
+		#print convertError
+		
+		optPathDict.update(eval(convertResult))
 
 		return optPathDict
 
@@ -274,3 +321,10 @@ class Sbsrender():
 				self.buildShadingNetwork(optPathDict, itemName)
 			shadedItem.append(itemName)
 		print 'Job Time: ' + str(timerX(st= tick))
+
+
+if __name__ == '__main__':
+	xeroxPath = eval(sys.argv[1])
+	outputDir = sys.argv[2]
+	outputSize = sys.argv[3]
+	xeroxInputs(xeroxPath, outputDir, outputSize)
