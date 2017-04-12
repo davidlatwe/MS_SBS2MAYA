@@ -5,6 +5,7 @@ Created on 2016.12.30
 @author: davidpower
 '''
 import os
+import copy
 from functools import partial
 
 from pymel.core import *
@@ -387,7 +388,7 @@ def ui_main():
 			if typeName in inputType or typeName in xeroxType:
 				if udimCode.isdigit() if sbsrender.isUDIM else True:
 					if not infoBox:
-						infoBox = infoBox_init
+						infoBox = copy.deepcopy(infoBox_init)
 						infoBox['root'] = os.path.dirname(f)
 						infoBox['ext'] = os.path.splitext(f)[-1][1:]
 						itemName_currentMatch = itemName
@@ -396,10 +397,10 @@ def ui_main():
 							infoBox['input'][typeName] = f
 						if typeName in xeroxType:
 							infoBox['xerox'][typeName] = f
-			if len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
+			if infoBox and len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
 				sbsrender.imgInputSet[itemName] = infoBox
 				infoBox = {}
-
+		
 		for item in sbsrender.imgInputSet:
 			checkResult_txsc.append(item)
 

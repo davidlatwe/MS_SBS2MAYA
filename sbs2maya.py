@@ -29,22 +29,20 @@ def _save_json(jsonPath, dictData):
 
 def _getTextureRes(imgPath):
 	""" docstring """
+	# make var
 	utilWidth = om.MScriptUtil()
 	utilWidth.createFromInt(0)
 	ptrWidth = utilWidth.asUintPtr()
 	utilHeight = om.MScriptUtil()
 	utilHeight.createFromInt(0)
 	ptrHeight = utilHeight.asUintPtr()
-	try:
-		textureFile = om.MImage()
-		textureFile.readFromFile ( imgPath )
-		textureFile.getSize(ptrWidth, ptrHeight)
-		width = om.MScriptUtil.getUint(ptrWidth)
-		height = om.MScriptUtil.getUint(ptrHeight)
-		return width, height
-	except:
-		warning( 'Texture Res error: ' + imgPath )
-		return None
+	# get res
+	textureFile = om.MImage()
+	textureFile.readFromFile ( imgPath )
+	textureFile.getSize(ptrWidth, ptrHeight)
+	width = om.MScriptUtil.getUint(ptrWidth)
+	height = om.MScriptUtil.getUint(ptrHeight)
+	return width, height
 
 
 def _resizeTexture(imgPath, newPath, imgSize, preserveAspectRatio= True):
@@ -60,9 +58,9 @@ def _resizeTexture(imgPath, newPath, imgSize, preserveAspectRatio= True):
 		error('Failed resize image to: ' + newPath)
 
 
-def xeroxInputs(xeroxPath, outputDir, outputSize):
+def xeroxOutputs(xeroxPath, outputDir, outputSize):
 	""" docstring """
-	optPathDict = {}
+	xeroxDict = {}
 	for xerox in xeroxPath:
 		src_normalMap = xeroxPath[xerox]
 		dst_normalMap = outputDir + os.sep + os.path.basename(src_normalMap)
@@ -71,8 +69,61 @@ def xeroxInputs(xeroxPath, outputDir, outputSize):
 			_resizeTexture(src_normalMap, dst_normalMap, [outputSize, outputSize])
 		else:
 			copyfile(src_normalMap, dst_normalMap)
-		optPathDict[xerox] = dst_normalMap.replace('\\', '/')
-	print optPathDict
+		xeroxDict[xerox] = dst_normalMap.replace('\\', '/')
+	print xeroxDict
+
+
+def taskPackage(textureName, sbsrenderCMD, sbsrenderOutNum, xeroxCMD):
+	""" docstring """
+	stdDict = {
+		'taskName': textureName,
+		'sbsrender': {
+			'result': {},
+			'stdout': '',
+			'stderr': ''
+		},
+		'xerox': {
+			'result': {},
+			'stdout': '',
+			'stderr': ''
+		}
+	}
+
+	sbsrenderProc = Popen(sbsrenderCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+	sbsrenderStdout, sbsrenderStderr = sbsrenderProc.communicate()
+	stdDict['sbsrender']['stdout'] = sbsrenderStdout
+	stdDict['sbsrender']['stderr'] = sbsrenderStderr
+	if sbsrenderStdout:
+		pathCount = 0
+		optPathDict = {}
+		sbsrenderOutNum = eval(sbsrenderOutNum)
+		for line in sbsrenderStdout.split('\r\n'):
+			for key in sbsrenderOutNum:
+				if line.startswith('* Output "%s" saved to:' % key):
+					optPathDict[key] = line.split('"')[-2]
+					break
+		if len(optPathDict) == len(sbsrenderOutNum):
+			stdDict['sbsrender']['result'] = optPathDict
+	
+	if sbsrenderStderr:
+		print stdDict
+		return None
+	
+	xeroxCMD = eval(xeroxCMD)
+	xeroxProc = Popen(xeroxCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+	xeroxStdout, xeroxStderr = xeroxProc.communicate()
+	stdDict['xerox']['stdout'] = xeroxStdout
+	stdDict['xerox']['stderr'] = xeroxStderr
+	if xeroxStdout:
+		try:
+			xeroxDict = eval(xeroxStdout)
+		except:
+			stdDict['xerox']['stderr'] += '\nxeroxStdout evaluation failed: ' + xeroxStdout
+		if isinstance(xeroxDict, dict):
+			stdDict['xerox']['result'] = xeroxDict
+		else:
+			stdDict['xerox']['stderr'] += '\nxeroxStdout is not dict type: ' + xeroxStdout
+	print stdDict
 
 
 class Sbsrender():
@@ -84,6 +135,7 @@ class Sbsrender():
 		self.settingsRoot = os.environ.get('MAYA_APP_DIR')
 		self.configFile = '/'.join([self.settingsRoot, 'sbs2maya_workConfigs.json'])
 		self.statusFile = '/'.join([self.settingsRoot, 'sbs2maya_lastStatus.json'])
+		self.mayapyexe = os.environ['MAYA_LOCATION'] + '/bin/mayapy.exe'
 		## configFile default content
 		self.init_workConfig = {
 			'sbsrender': 'C:/Program Files/Allegorithmic/Substance Designer 6/sbsrender.exe',
@@ -142,31 +194,13 @@ class Sbsrender():
 
 	def sbsrender_cmd(self, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
 		""" docstring """
-		workConfig = self.workConfig
-		sbsrenderPath = workConfig['sbsrender']
-		sbsarGraph = self.sbsArgs['graph']
-		sbsarFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
-		outputName = textureName + '{outputNodeName}'
-
-		if not os.path.exists(sbsrenderPath):
-			error('sbsrender was not found in this path: ' + sbsrenderPath)
-			return None
-		if not os.path.exists(sbsarFile):
-			error('sbsar file was not found in this path: ' + sbsarFile)
-			return None
-
 		if outputSize:
 			outputSize = str(len(bin(int(outputSize))[3:]))
 		else:
 			sampleImg = inputPath[self.sbsArgs['input'].keys()[0]]
-			inputsize = _getTextureRes(sampleImg)
-			if inputsize is None:
-				error('Can not query texture file resolution: ' + sampleImg)
-				return None
-			else:
-				outputSize = str(len(bin(int(inputsize[0]))[3:]))
+			outputSize = str(len(bin(int(_getTextureRes(sampleImg)[0]))[3:]))
 
-		graphInput = '' if not sbsarGraph else ('--input-graph "%s" ' % sbsarGraph)
+		graphInput = '' if not self.sbsArgs['graph'] else ('--input-graph "%s" ' % self.sbsArgs['graph'])
 		entryInput = ''
 		for p in inputPath:
 			entryInput += '--set-entry ' + self.sbsArgs['input'][p] + '@"' + inputPath[p] + '" '
@@ -179,102 +213,35 @@ class Sbsrender():
 			if self.sbsArgs['guide'][g]:
 				guideInput += '--' + g + ' ' + self.sbsArgs['guide'][g] + ' '
 
-		cmd = '"%s" render ' % sbsrenderPath \
-			+ '--inputs "%s" ' % sbsarFile \
+		cmd = '"%s" render ' % self.workConfig['sbsrender'] \
+			+ '--inputs "%s" ' % self.sbsArgsFile \
 			+ graphInput \
 			+ entryInput \
 			+ valueInput \
 			+ '--output-path "%s" ' % outputDir \
-			+ '--output-name "%s" ' % outputName \
+			+ '--output-name "%s" ' % (textureName + self.sepTYPE + '{outputNodeName}') \
 			+ '--output-format "%s" ' % outputFormat \
 			+ guideInput \
 			+ '--set-value $outputsize@' + outputSize + ',' + outputSize
 		
 		if not os.path.exists(outputDir):
 			os.mkdir(outputDir)
-
 		return cmd
+	
+
+	def xeroxOutputs_cmd(self, xeroxPath, outputDir, outputSize):
+		""" docstring """
+		return [self.mayapyexe, __file__, 'do_sub_xerox', str(xeroxPath), outputDir, outputSize]
 
 
-	def sbsrender_exec(self, cmd):
-		"""
-		[var] optPathDict : sbsrender output name and output file path
-		"""
-		#print cmd
-		process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-		convertResult, convertError = process.communicate()
-		hasError = None
-		print convertResult
-		print convertError
-
-		def sbsrender_error(msg):
-			"""
-			sbsrender.exe output msg Example:
-
-			1) Sucess
-			---	* convertResult:
-			Results from graph "pkg://Converter" into package "P:/Temp/AK/PBR_SBS2VRay.sbsar":
-			* Output "diffuse" saved to: "P:/Temp/AK/converted/aaa_diffuse.png"
-			* Output "reflection" saved to: "P:/Temp/AK/converted/aaa_reflection.png"
-			* Output "glossiness" saved to: "P:/Temp/AK/converted/aaa_glossiness.png"
-			* Output "ior" saved to: "P:/Temp/AK/converted/aaa_ior.png"
-			---	* convertError: (None)
-			
-			2) Failed
-			--- * convertResult:
-			Results from graph "pkg://Converter" into package "P:/Temp/AK/PBR_SBS2VRay.sbsar":
-			---	* convertError:
-			Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_diffuse.png
-			Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_reflection.png
-			Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_glossiness.png
-			Error: Result cannot be saved into: P:/Temp/AK/converted/aaa_ior.png
-
-			"""
-			print '\n+++'
-			print convertResult
-			print '---'
-			print convertError
-			print '+++'
-			error(msg)
-
-		if convertResult:
-			pathCount = 0
-			optPathDict = {}
-			for line in convertResult.split('\r\n'):
-				for key in self.sbsArgs['yield']:
-					if line.startswith('* Output "%s" saved to:' % key):
-						optPathDict[key] = line.split('"')[-2]
-						break
-			if len(optPathDict) == len(self.sbsArgs['yield']):
-				return optPathDict
-			else:
-				# ERROR
-				sbsrender_error('Strange error, the number of exported channels was not matched. See scriptEditor for more info')
-				return None
-		else:
-			# ERROR
-			sbsrender_error('Fatal Error, sbsrender not working. See scriptEditor for more info')
-			return None
-
-
-	def sbs2maya_convert(self, outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
+	def task_cmd(self, outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize):
 		""" docstring """
 		outputDir = (inputDir + os.sep + 'converted') if not outputDir else outputDir
-		# Input
-		cmd = self.sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
-		optPathDict = self.sbsrender_exec(cmd)
-
-		# Xerox
-		mayapyEXE = os.environ['MAYA_LOCATION'] + '/bin/mayapy.exe'
-		process = Popen([mayapyEXE, __file__, str(xeroxPath), outputDir, outputSize], shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-		convertResult, convertError = process.communicate()
-		hasError = None
-		#print convertResult
-		#print convertError
-		
-		optPathDict.update(eval(convertResult))
-
-		return optPathDict
+		sbsYieldList = str(self.sbsArgs['yield'].keys())
+		sbsrenderCMD = self.sbsrender_cmd(outputDir, textureName, inputDir, inputPath, outputFormat, outputSize)
+		xeroxCMD = str(self.xeroxOutputs_cmd(xeroxPath, outputDir, outputSize))
+		taskCMD = [self.mayapyexe, __file__, 'do_main_proc', textureName, sbsrenderCMD, sbsYieldList, xeroxCMD]
+		return taskCMD
 
 
 	def buildShadingNetwork(self, optPathDict, itemName):
@@ -295,36 +262,53 @@ class Sbsrender():
 		""" docstring """
 		tick = timerX()
 		shadedItem = []
-		for texture in self.imgInputSet:
-			inputDir = self.imgInputSet[texture]['root']
-			textureName = texture + self.sepTYPE
+
+		sbsrenderPath = self.workConfig['sbsrender']
+		if not os.path.exists(sbsrenderPath):
+			error('sbsrender was not found in this path: ' + sbsrenderPath)
+			return None
+		self.sbsArgsFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
+		if not os.path.exists(self.sbsArgsFile):
+			error('sbsar file was not found in this path: ' + self.sbsArgsFile)
+			return None
+		# build job
+		jobPackage = []
+		for textureName in self.imgInputSet:
+			inputDir = self.imgInputSet[textureName]['root']
 			# texturePath
-			inputPath = self.imgInputSet[texture]['input']
-			xeroxPath = self.imgInputSet[texture]['xerox']
-			outputFormat = self.imgInputSet[texture]['ext'] if not outputFormat else outputFormat
-			optPathDict = self.sbs2maya_convert(outputDir, textureName, inputDir,
-				inputPath, xeroxPath, outputFormat, outputSize)
-			itemName = texture[:-5] if self.isUDIM else texture
-			
-			# check V-Ray is loaded or not
-			# if buildShad and not pluginInfo('vrayformaya', q= 1, l= 1):
-			# 	try:
-			# 		loadPlugin('vrayformaya', qt= 1)
-			# 	except Exception, e:
-			# 		warning('---------------------')
-			# 		print e
-			# 		error('Failed to load V-Ray.')
-			# 		buildShad = False
-			
+			inputPath = self.imgInputSet[textureName]['input']
+			xeroxPath = self.imgInputSet[textureName]['xerox']
+			outputFormat = self.imgInputSet[textureName]['ext'] if not outputFormat else outputFormat
+			taskCMD = self.task_cmd(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize)
+			jobPackage.append(taskCMD)
+		# do job
+		jobProc = [Popen(taskCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE) for taskCMD in jobPackage]
+		jobStduot = []
+		while jobProc:
+			for task in jobProc:
+				if task.poll() is not None:
+					taskStdout, taskStderr = task.communicate()
+					jobStduot.append(taskStdout)
+					jobProc.remove(task)
+		for stdout in jobStduot:
+			print stdout
+		# update
+		#optPathDict = self.sbsrender_exec(cmd)
+		#xeroxDict = self.xeroxOutputs_exec(cmd)
+		'''
+		optPathDict.update(xeroxDict)
 			# build shad
+			itemName = textureName[:-5] if self.isUDIM else textureName
 			if not itemName in shadedItem and buildShad and optPathDict is not None:
 				self.buildShadingNetwork(optPathDict, itemName)
 			shadedItem.append(itemName)
+		'''
 		print 'Job Time: ' + str(timerX(st= tick))
 
 
 if __name__ == '__main__':
-	xeroxPath = eval(sys.argv[1])
-	outputDir = sys.argv[2]
-	outputSize = sys.argv[3]
-	xeroxInputs(xeroxPath, outputDir, outputSize)
+	intent = sys.argv[1]
+	if intent == 'do_sub_xerox':
+		xeroxOutputs(eval(sys.argv[2]), sys.argv[3], sys.argv[4])
+	if intent == 'do_main_proc':
+		taskPackage(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
