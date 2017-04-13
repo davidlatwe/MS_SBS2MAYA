@@ -282,27 +282,31 @@ class Sbsrender():
 			taskCMD = self.task_cmd(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize)
 			jobPackage.append(taskCMD)
 		# do job
-		jobProc = [Popen(taskCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE) for taskCMD in jobPackage]
+		parallelLimit = 8
 		jobStduot = []
-		while jobProc:
-			for task in jobProc:
-				if task.poll() is not None:
-					taskStdout, taskStderr = task.communicate()
-					jobStduot.append(taskStdout)
-					jobProc.remove(task)
-		for stdout in jobStduot:
-			print stdout
-		# update
-		#optPathDict = self.sbsrender_exec(cmd)
-		#xeroxDict = self.xeroxOutputs_exec(cmd)
-		'''
-		optPathDict.update(xeroxDict)
+		jobProc = []
+		for taskCMD in jobPackage:
+			jobProc.append(Popen(taskCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE))
+			if len(jobProc) == parallelLimit:
+				while jobProc:
+					for task in jobProc:
+						if task.poll() is not None:
+							taskStdout, taskStderr = task.communicate()
+							jobStduot.append(taskStdout)
+							jobProc.remove(task)
+				jobProc = []
+		for result in jobStduot:
+			result = eval(result)
+			textureName = result['taskName']
+			optPathDict = result['sbsrender']['result']
+			xeroxDict = result['xerox']['result']
+			optPathDict.update(xeroxDict)
 			# build shad
 			itemName = textureName[:-5] if self.isUDIM else textureName
 			if not itemName in shadedItem and buildShad and optPathDict is not None:
 				self.buildShadingNetwork(optPathDict, itemName)
 			shadedItem.append(itemName)
-		'''
+			
 		print 'Job Time: ' + str(timerX(st= tick))
 
 

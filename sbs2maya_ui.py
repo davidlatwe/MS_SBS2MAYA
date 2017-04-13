@@ -82,6 +82,7 @@ def ui_settings():
 		workConfig['sbsarLib'] = sLib_text.getText()
 		workConfig['saveLast'] = save_mqsb.isChecked()
 		sbsrender.set_sbsWorkConfigs(workConfig)
+		warning('[SBS2MAYA] : Config saved.')
 
 	sFig_btn.setCommand(saveConfigs)
 
@@ -94,8 +95,6 @@ def ui_main():
 
 	window(windowName, t= windowTitle, s= 0, mxb= 0, mnb= 0)
 	columnLayout(column_main, adj= 1)
-	
-	#main_form = formLayout()
 
 	rowLayout(nc= 2, adj= 1, w= windowWidth)
 	bannerArea = columnLayout(adj= 1, h= 40)
@@ -103,7 +102,10 @@ def ui_main():
 	QBannerTxt = mqt.convert(bannerTxt)
 	QBannerTxt.setStyleSheet('QObject {font: bold 26px; color: #222222;}')
 	setParent('..')
-	configBtn = iconTextButton(i= 'gear.png', h= 40)
+	columnLayout(adj= 1, w= 20)
+	configBtn = iconTextButton(i= 'nodeGrapherGear.svg', h= 18, w= 18)
+	text(l= '', h= 20)
+	setParent('..')
 	setParent('..')
 	
 	text(l= '', h= 4)
@@ -117,7 +119,6 @@ def ui_main():
 	rowLayout(nc= 2, adj= 1)
 	sbsarFile_menu = optionMenu(h= 21)
 	mcBtn_textF_choose = iconTextButton(i= 'editRenderPass.png', w= 20, h= 20)
-	#text(l= '', w= 3)
 	setParent('..')
 
 	text(l= '', h= 2)
@@ -265,6 +266,8 @@ def ui_main():
 	def switchSettingsUI():
 		ui_settings()
 		mainVis = columnLayout(column_workArea, q= 1, vis= True)
+		iconImg = 'SP_FileDialogBack_Disabled.png' if mainVis else 'nodeGrapherGear.svg'
+		iconTextButton(configBtn, e= 1, i= iconImg)
 		columnLayout(column_workArea, e= 1, vis= not mainVis)
 		columnLayout(column_settings, e= 1, vis= mainVis)
 		window(windowName, e= 1,
