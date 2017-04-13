@@ -5,7 +5,6 @@ Created on 2016.12.30
 @author: davidpower
 '''
 import os
-import copy
 from functools import partial
 
 from pymel.core import *
@@ -15,16 +14,16 @@ import mQtGui.muiSwitchBox as mqsb; reload(mqsb)
 import mQtGui.mGetQt as mqt; reload(mqt)
 import sbs2maya; reload(sbs2maya)
 
+sbsrender = sbs2maya.Sbsrender()
 
-ext_list = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
-siz_list = ['64', '128', '256', '512', '1024', '2048', '4096', '8192']
 
-windowTitle = 'SBS 2 MAYA - v1.2'
+windowTitle = 'SBS 2 MAYA - v1.8b'
 windowSettings = ' - Settings'
 windowName = 'ms_sbs2maya_mainUI'
 column_main = windowName + '_main_column'
 column_workArea = windowName + '_workArea_column'
 column_settings = windowName + '_settings_column'
+column_reporter = windowName + '_reporter_column'
 windowWidth = 320
 height_workArea = 628
 height_settings = 229
@@ -32,8 +31,6 @@ if about(li= True):
 	height_offset = 1
 if about(win= True):
 	height_offset = 3
-
-sbsrender = sbs2maya.Sbsrender()
 
 
 def ui_settings():
@@ -85,6 +82,14 @@ def ui_settings():
 		warning('[SBS2MAYA] : Config saved.')
 
 	sFig_btn.setCommand(saveConfigs)
+
+
+def ui_proc(taskNum):
+	"""
+	"""
+	if columnLayout(column_reporter, q= 1, ex= 1):
+		deleteUI(column_reporter)
+	columnLayout(column_reporter, adj= 1, cal= 'left', p= column_main)
 
 
 def ui_main():
@@ -166,7 +171,7 @@ def ui_main():
 	rowLayout(nc= 1)
 	inputExt_menu = optionMenu(h= 21)
 	menuItem('. ***')
-	for ext in ext_list:
+	for ext in sbsrender.imgFormat:
 		menuItem(ext)
 	setParent('..')
 	text(l= '', w= 10)
@@ -224,7 +229,7 @@ def ui_main():
 	text(l= ' + Output Texture File Format', al= 'left', h= 20)
 	outputExt_menu = optionMenu(h= 21)
 	menuItem('{ As is }')
-	for ext in ext_list:
+	for ext in sbsrender.imgFormat:
 		menuItem(ext)
 	text(l= '', w= 3)
 	setParent('..')
@@ -233,8 +238,8 @@ def ui_main():
 	text(l= ' + Output Texture Size', al= 'left', h= 20)
 	outputSiz_menu = optionMenu(h= 21)
 	menuItem('{ As is }')
-	for siz in siz_list:
-		menuItem(siz)
+	for res in [str(2**q) for q in range(6, 14)]:
+		menuItem(res)
 	text(l= '', w= 3)
 	setParent('..')
 
@@ -258,7 +263,6 @@ def ui_main():
 
 	setParent('..')
 	
-
 
 	# #################################################################################################
 	# ui commands
@@ -340,70 +344,16 @@ def ui_main():
 		sbsrender.isUDIM = udim_mqsb.isChecked()
 		sbsrender.sepUDIM = sepUDIM_btn.getLabel()
 		sbsrender.sepTYPE = sepTYPE_btn.getLabel()
-
-		workConfig = sbsrender.workConfig
-		sbaArgs = sbsrender.get_sbsArgs()
-		inputType = sbaArgs['input'].keys()
-		xeroxType = sbaArgs['xerox'].keys()
-
+		sbsrender.get_sbsArgs()
 		inputDir = os.path.abspath(inputDir_textF.getText())
 		dirWalk = walk_mqsb.isChecked()
 		extType = inputExt_menu.getValue()
 		extType = '' if extType == '. ***' else extType
-
+		# reset
 		checkResult_txsc.removeAll()
-
 		sbsrender.imgInputSet = {}
-
-		# grab all files
-		fileList = []
-		if dirWalk:
-			for root, dirs, files in os.walk(inputDir):
-				for f in files:
-					if not extType or os.path.splitext(f)[-1] == extType:
-						fileList.append(os.path.join(root, f))
-		else:
-			for f in os.listdir(inputDir):
-				f = os.path.join(inputDir, f)
-				if os.path.isfile(f):
-					if not extType or os.path.splitext(f)[-1] == extType:
-						fileList.append(f)
-
-		# filter out wont be matched
-		infoBox = {}
-		infoBox_init = {
-			'root': '',
-			'ext': '',
-			'input': {},
-			'xerox': {}
-			}
-		itemName_currentMatch = ''
-		for f in sorted(fileList):
-			fileName = os.path.basename(os.path.splitext(f)[0])
-			typeName = fileName.split(sbsrender.sepTYPE)[-1].lower()
-			itemName = fileName[:-(len(typeName) + 1)]
-			udimCode = itemName.split(sbsrender.sepUDIM)[-1] if sbsrender.isUDIM else ''
-			if not sbsrender.isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
-				continue
-			if infoBox and not itemName_currentMatch and not itemName == itemName_currentMatch:
-				if len(infoBox['input']) < len(inputType) or len(infoBox['xerox']) < len(xeroxType):
-					infoBox = {}
-			if typeName in inputType or typeName in xeroxType:
-				if udimCode.isdigit() if sbsrender.isUDIM else True:
-					if not infoBox:
-						infoBox = copy.deepcopy(infoBox_init)
-						infoBox['root'] = os.path.dirname(f)
-						infoBox['ext'] = os.path.splitext(f)[-1][1:]
-						itemName_currentMatch = itemName
-					if infoBox['root'] and infoBox['ext']:
-						if typeName in inputType:
-							infoBox['input'][typeName] = f
-						if typeName in xeroxType:
-							infoBox['xerox'][typeName] = f
-			if infoBox and len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
-				sbsrender.imgInputSet[itemName] = infoBox
-				infoBox = {}
-		
+		# analyse
+		sbsrender.imageFileNameAnalyse(inputDir, dirWalk, extType)
 		for item in sbsrender.imgInputSet:
 			checkResult_txsc.append(item)
 
@@ -447,6 +397,7 @@ def ui_main():
 				if not item in selectedItem:
 					sbsrender.imgInputSet.pop(item, None)
 		if sbsrender.imgInputSet:
+			task_ui_dict = ui_proc(taskNum)
 			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')

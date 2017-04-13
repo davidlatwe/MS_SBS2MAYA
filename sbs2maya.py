@@ -5,7 +5,7 @@ Created on 2016.12.30
 @author: davidpower
 '''
 import json
-import os, sys
+import os, sys, copy
 from shutil import copyfile
 from subprocess import PIPE, Popen
 
@@ -136,6 +136,7 @@ class Sbsrender():
 		self.configFile = '/'.join([self.settingsRoot, 'sbs2maya_workConfigs.json'])
 		self.statusFile = '/'.join([self.settingsRoot, 'sbs2maya_lastStatus.json'])
 		self.mayapyexe = os.environ['MAYA_LOCATION'] + '/bin/mayapy.exe'
+		self.imgFormat = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
 		## configFile default content
 		self.init_workConfig = {
 			'sbsrender': 'C:/Program Files/Allegorithmic/Substance Designer 6/sbsrender.exe',
@@ -190,7 +191,54 @@ class Sbsrender():
 		""" docstring """
 		self.sbsArgsFile = self.workConfig['sbsarLib'] + self.sbsArgsFile
 		self.sbsArgs = _load_json(self.sbsArgsFile)
-		return self.sbsArgs
+	
+	def imageFileNameAnalyse(self, inputDir, dirWalk, extType):
+		""" docstring """
+		inputType = self.sbsArgs['input'].keys()
+		xeroxType = self.sbsArgs['xerox'].keys()
+		# grab all files
+		fileList = []
+		if dirWalk:
+			for root, dirs, files in os.walk(inputDir):
+				for f in files:
+					if not extType or os.path.splitext(f)[-1] == extType:
+						fileList.append(os.path.join(root, f))
+		else:
+			for f in os.listdir(inputDir):
+				f = os.path.join(inputDir, f)
+				if os.path.isfile(f):
+					if not extType or os.path.splitext(f)[-1] == extType:
+						fileList.append(f)
+		# filter out wont be matched
+		infoBox = {}
+		infoBox_init = { 'root': '', 'ext': '', 'input': {}, 'xerox': {} }
+		itemName_currentMatch = ''
+		for f in sorted(fileList):
+			fileName = os.path.basename(os.path.splitext(f)[0])
+			typeName = fileName.split(self.sepTYPE)[-1].lower()
+			itemName = fileName[:-(len(typeName) + 1)]
+			udimCode = itemName.split(self.sepUDIM)[-1] if self.isUDIM else ''
+			if not self.isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
+				continue
+			if infoBox and not itemName_currentMatch and not itemName == itemName_currentMatch:
+				if len(infoBox['input']) < len(inputType) or len(infoBox['xerox']) < len(xeroxType):
+					infoBox = {}
+			if typeName in inputType or typeName in xeroxType:
+				if udimCode.isdigit() if self.isUDIM else True:
+					if not infoBox:
+						infoBox = copy.deepcopy(infoBox_init)
+						infoBox['root'] = os.path.dirname(f)
+						infoBox['ext'] = os.path.splitext(f)[-1][1:]
+						itemName_currentMatch = itemName
+					if infoBox['root'] and infoBox['ext']:
+						if typeName in inputType:
+							infoBox['input'][typeName] = f
+						if typeName in xeroxType:
+							infoBox['xerox'][typeName] = f
+			if infoBox and len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
+				self.imgInputSet[itemName] = infoBox
+				infoBox = {}
+		return None
 
 	def sbsrender_cmd(self, outputDir, textureName, inputDir, inputPath, outputFormat, outputSize):
 		""" docstring """
