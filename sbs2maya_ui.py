@@ -84,12 +84,15 @@ def ui_settings():
 	sFig_btn.setCommand(saveConfigs)
 
 
-def ui_proc(taskNum):
+def ui_proc(taskNum, parallel):
 	"""
 	"""
 	if columnLayout(column_reporter, q= 1, ex= 1):
 		deleteUI(column_reporter)
 	columnLayout(column_reporter, adj= 1, cal= 'left', p= column_main)
+
+	for i in range(parallel):
+		print $$
 
 
 def ui_main():
@@ -397,7 +400,7 @@ def ui_main():
 				if not item in selectedItem:
 					sbsrender.imgInputSet.pop(item, None)
 		if sbsrender.imgInputSet:
-			task_ui_dict = ui_proc(taskNum)
+			task_ui_dict = ui_proc(len(sbsrender.imgInputSet), sbsrender.parallel)
 			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')

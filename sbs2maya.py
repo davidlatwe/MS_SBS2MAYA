@@ -137,11 +137,13 @@ class Sbsrender():
 		self.statusFile = '/'.join([self.settingsRoot, 'sbs2maya_lastStatus.json'])
 		self.mayapyexe = os.environ['MAYA_LOCATION'] + '/bin/mayapy.exe'
 		self.imgFormat = ['.png', '.jpg', '.tif', '.tga', '.exr', '.bmp']
+		self.parallel = 8
 		## configFile default content
 		self.init_workConfig = {
 			'sbsrender': 'C:/Program Files/Allegorithmic/Substance Designer 6/sbsrender.exe',
 			'sbsarLib': os.path.dirname(__file__).replace('\\', '/') + '/sbsarLib',
 			'saveLast': 0,
+			'parallel': self.parallel
 			}
 		## statusFile default content
 		self.init_lastStatus = {
@@ -330,12 +332,11 @@ class Sbsrender():
 			taskCMD = self.task_cmd(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize)
 			jobPackage.append(taskCMD)
 		# do job
-		parallelLimit = 8
 		jobStduot = []
 		jobProc = []
 		for taskCMD in jobPackage:
 			jobProc.append(Popen(taskCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE))
-			if len(jobProc) == parallelLimit:
+			if len(jobProc) == self.parallel:
 				while jobProc:
 					for task in jobProc:
 						if task.poll() is not None:
