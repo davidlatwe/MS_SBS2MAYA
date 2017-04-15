@@ -332,6 +332,7 @@ def ui_main():
 
 	def checkTextureFile(*args):
 		sbsrender.sbsArgsFile = sbsarFile_menu.getValue()
+		sbsrender.hideUDIM = hide_mqsb.isChecked()
 		sbsrender.isUDIM = udim_mqsb.isChecked()
 		sbsrender.sepUDIM = sepUDIM_btn.getLabel()
 		sbsrender.sepTYPE = sepTYPE_btn.getLabel()
@@ -389,7 +390,7 @@ def ui_main():
 					sbsrender.imgInputSet.pop(item, None)
 		if sbsrender.imgInputSet:
 			progressWindow(t= 'SBS2MAYA Converting...', max= len(sbsrender.imgInputSet), ii= True)
-			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir, sbsProcBar)
+			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir)
 		else:
 			warning('SBS2MAYA : Empty input.')
 

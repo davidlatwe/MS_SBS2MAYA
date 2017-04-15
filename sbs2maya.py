@@ -166,6 +166,7 @@ class Sbsrender():
 		self.sbsArgsFile = ''
 		self.sbsArgs = {}
 		self.imgInputSet = {}
+		self.hideUDIM = False
 		self.isUDIM = False
 		self.sepUDIM = ''
 		self.sepTYPE = ''
@@ -220,7 +221,7 @@ class Sbsrender():
 			typeName = fileName.split(self.sepTYPE)[-1].lower()
 			itemName = fileName[:-(len(typeName) + 1)]
 			udimCode = itemName.split(self.sepUDIM)[-1] if self.isUDIM else ''
-			if not self.isUDIM and hide_mqsb.isChecked() and len(itemName) > 5 and itemName[-5] in ['_', '.']:
+			if not self.isUDIM and self.hideUDIM and len(itemName) > 5 and itemName[-5] in ['_', '.']:
 				continue
 			if infoBox and not itemName_currentMatch and not itemName == itemName_currentMatch:
 				if len(infoBox['input']) < len(inputType) or len(infoBox['xerox']) < len(xeroxType):
@@ -336,7 +337,7 @@ class Sbsrender():
 		jobStduot = []
 		jobProc = []
 		while jobPackage or jobProc:
-			if progressWindow(q= True, ic= True ):
+			if progressWindow(q= True, ic= True):
 				for task in jobProc:
 					task.kill()
 				isCancelled = True
@@ -348,7 +349,7 @@ class Sbsrender():
 					taskStdout, taskStderr = task.communicate()
 					jobStduot.append(taskStdout)
 					jobProc.remove(task)
-					progressWindow(e= True, s= 1, st= str(len(jobPackage)) ' more left...')
+					progressWindow(e= True, s= 1, st= str(len(jobPackage)) + ' more left, ' + str(len(jobProc)) + 'processing...')
 		progressWindow(ep= 1)
 		if not isCancelled:
 			for result in jobStduot:
