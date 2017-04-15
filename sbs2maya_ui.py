@@ -23,7 +23,6 @@ windowName = 'ms_sbs2maya_mainUI'
 column_main = windowName + '_main_column'
 column_workArea = windowName + '_workArea_column'
 column_settings = windowName + '_settings_column'
-column_reporter = windowName + '_reporter_column'
 windowWidth = 320
 height_workArea = 628
 height_settings = 229
@@ -82,17 +81,6 @@ def ui_settings():
 		warning('[SBS2MAYA] : Config saved.')
 
 	sFig_btn.setCommand(saveConfigs)
-
-
-def ui_proc(taskNum, parallel):
-	"""
-	"""
-	if columnLayout(column_reporter, q= 1, ex= 1):
-		deleteUI(column_reporter)
-	columnLayout(column_reporter, adj= 1, cal= 'left', p= column_main)
-
-	for i in range(parallel):
-		print $$
 
 
 def ui_main():
@@ -400,8 +388,8 @@ def ui_main():
 				if not item in selectedItem:
 					sbsrender.imgInputSet.pop(item, None)
 		if sbsrender.imgInputSet:
-			task_ui_dict = ui_proc(len(sbsrender.imgInputSet), sbsrender.parallel)
-			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir)
+			progressWindow(t= 'SBS2MAYA Converting...', max= len(sbsrender.imgInputSet), ii= True)
+			sbsrender.dist(outputFormat, outputSize, buildShad, outputDir, sbsProcBar)
 		else:
 			warning('SBS2MAYA : Empty input.')
 

@@ -332,31 +332,38 @@ class Sbsrender():
 			taskCMD = self.task_cmd(outputDir, textureName, inputDir, inputPath, xeroxPath, outputFormat, outputSize)
 			jobPackage.append(taskCMD)
 		# do job
+		isCancelled = False
 		jobStduot = []
 		jobProc = []
-		for taskCMD in jobPackage:
-			jobProc.append(Popen(taskCMD, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE))
-			if len(jobProc) == self.parallel:
-				while jobProc:
-					for task in jobProc:
-						if task.poll() is not None:
-							taskStdout, taskStderr = task.communicate()
-							jobStduot.append(taskStdout)
-							jobProc.remove(task)
-				jobProc = []
-		for result in jobStduot:
-			result = eval(result)
-			textureName = result['taskName']
-			optPathDict = result['sbsrender']['result']
-			xeroxDict = result['xerox']['result']
-			optPathDict.update(xeroxDict)
-			# build shad
-			itemName = textureName[:-5] if self.isUDIM else textureName
-			if not itemName in shadedItem and buildShad and optPathDict is not None:
-				self.buildShadingNetwork(optPathDict, itemName)
-			shadedItem.append(itemName)
-			
-		print 'Job Time: ' + str(timerX(st= tick))
+		while jobPackage or jobProc:
+			if progressWindow(q= True, ic= True ):
+				for task in jobProc:
+					task.kill()
+				isCancelled = True
+				break
+			if len(jobProc) < self.parallel and jobPackage:
+				jobProc.append(Popen(jobPackage.pop(), shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE))
+			for task in jobProc:
+				if task.poll() is not None:
+					taskStdout, taskStderr = task.communicate()
+					jobStduot.append(taskStdout)
+					jobProc.remove(task)
+					progressWindow(e= True, s= 1, st= str(len(jobPackage)) ' more left...')
+		progressWindow(ep= 1)
+		if not isCancelled:
+			for result in jobStduot:
+				result = eval(result)
+				textureName = result['taskName']
+				optPathDict = result['sbsrender']['result']
+				xeroxDict = result['xerox']['result']
+				optPathDict.update(xeroxDict)
+				# build shad
+				itemName = textureName[:-5] if self.isUDIM else textureName
+				if not itemName in shadedItem and buildShad and optPathDict is not None:
+					self.buildShadingNetwork(optPathDict, itemName)
+				shadedItem.append(itemName)
+				
+		print 'Job Time: ' + str(timerX(st= tick)) + (' [Cancelled]' if isCancelled else '')
 
 
 if __name__ == '__main__':
