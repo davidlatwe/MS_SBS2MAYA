@@ -164,7 +164,9 @@ class Sbsrender():
 		self.workConfig = {}
 		self.lastStatus = {}
 		self.sbsArgsFile = ''
+		self.sbsarFile = ''
 		self.sbsArgs = {}
+		self.imgSoveKeep = {}
 		self.imgInputSet = {}
 		self.hideUDIM = False
 		self.isUDIM = False
@@ -194,6 +196,10 @@ class Sbsrender():
 		""" docstring """
 		self.sbsArgsFile = self.workConfig['sbsarLib'] + self.sbsArgsFile
 		self.sbsArgs = _load_json(self.sbsArgsFile)
+	
+	def get_solvedImgSet(self):
+		""" docstring """
+		self.imgInputSet = copy.deepcopy(self.imgSoveKeep)
 	
 	def imageFileNameAnalyse(self, inputDir, dirWalk, extType):
 		""" docstring """
@@ -239,7 +245,7 @@ class Sbsrender():
 						if typeName in xeroxType:
 							infoBox['xerox'][typeName] = f
 			if infoBox and len(infoBox['input']) == len(inputType) and len(infoBox['xerox']) == len(xeroxType):
-				self.imgInputSet[itemName] = infoBox
+				self.imgSoveKeep[itemName] = infoBox
 				infoBox = {}
 		return None
 
@@ -265,7 +271,7 @@ class Sbsrender():
 				guideInput += '--' + g + ' ' + self.sbsArgs['guide'][g] + ' '
 
 		cmd = '"%s" render ' % self.workConfig['sbsrender'] \
-			+ '--inputs "%s" ' % self.sbsArgsFile \
+			+ '--inputs "%s" ' % self.sbsarFile \
 			+ graphInput \
 			+ entryInput \
 			+ valueInput \
@@ -301,6 +307,7 @@ class Sbsrender():
 		isUDIM = self.isUDIM
 		# need use namespace if import ma file ########################
 		shadingFile = self.sbsArgsFile[:-4] + 'ma'
+		print shadingFile
 		importFile(shadingFile, namespace= '__MS_SBS2MAYA_WIP__')
 		wipNode = ls('__MS_SBS2MAYA_WIP__:_outputNodeName_*', r= 1)
 		namespace(rm= '__MS_SBS2MAYA_WIP__', f= 1, mnr= 1)
@@ -321,9 +328,9 @@ class Sbsrender():
 		if not os.path.exists(sbsrenderPath):
 			error('sbsrender was not found in this path: ' + sbsrenderPath)
 			return None
-		self.sbsArgsFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
-		if not os.path.exists(self.sbsArgsFile):
-			error('sbsar file was not found in this path: ' + self.sbsArgsFile)
+		self.sbsarFile = os.path.dirname(self.sbsArgsFile) + os.sep + self.sbsArgs['sbsar']
+		if not os.path.exists(self.sbsarFile):
+			error('sbsar file was not found in this path: ' + self.sbsarFile)
 			return None
 		# build job
 		jobPackage = []

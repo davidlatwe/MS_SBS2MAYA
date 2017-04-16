@@ -343,10 +343,10 @@ def ui_main():
 		extType = '' if extType == '. ***' else extType
 		# reset
 		checkResult_txsc.removeAll()
-		sbsrender.imgInputSet = {}
+		sbsrender.imgSoveKeep = {}
 		# analyse
 		sbsrender.imageFileNameAnalyse(inputDir, dirWalk, extType)
-		for item in sbsrender.imgInputSet:
+		for item in sbsrender.imgSoveKeep:
 			checkResult_txsc.append(item)
 
 	checkTexture_btn.setCommand(partial(checkTextureFile))
@@ -359,7 +359,7 @@ def ui_main():
 		if item:
 			print '-'*10
 			print '***  ' + item[0]
-			info = sbsrender.imgInputSet[item[0]]
+			info = sbsrender.imgSoveKeep[item[0]]
 			print 'root: 	' + info['root']
 			print 'ext: 	' + info['ext']
 			print 'input:'
@@ -382,6 +382,7 @@ def ui_main():
 		buildShad = shad_mqsb.isChecked()
 		outputDirTF = outputDir_textF.getText()
 		outputDir = os.path.abspath(outputDirTF) if outputDirTF else ''
+		sbsrender.get_solvedImgSet()
 		if selt_mqsb.isChecked():
 			selectedItem = checkResult_txsc.getSelectItem()
 			allItems = checkResult_txsc.getAllItems()
