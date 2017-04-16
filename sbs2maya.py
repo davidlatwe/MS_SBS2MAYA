@@ -300,13 +300,16 @@ class Sbsrender():
 		sbsArgs = self.sbsArgs
 		isUDIM = self.isUDIM
 		# need use namespace if import ma file ########################
-		shadingFile = ''
+		shadingFile = self.sbsArgsFile[:-4] + 'ma'
 		importFile(shadingFile, namespace= '__MS_SBS2MAYA_WIP__')
-
+		wipNode = ls('__MS_SBS2MAYA_WIP__:_outputNodeName_*', r= 1)
+		namespace(rm= '__MS_SBS2MAYA_WIP__', f= 1, mnr= 1)
+		for node in wipNode:
+			node.rename(node.name().replace('_outputNodeName', itemName))
 		for channel in optPathDict:
-			i = optPathDict[channel][0]
-			tex = [difTex, refTex, gloTex, iorTex, norTex][i]
-			tex.fileTextureName.set(optPathDict[channel][1])
+			imgPath = optPathDict[channel]
+			fileNode = ls('_'.join([itemName, channel, 'file']))[0]
+			fileNode.fileTextureName.set(imgPath)
 
 
 	def dist(self, outputFormat, outputSize, buildShad, outputDir):
