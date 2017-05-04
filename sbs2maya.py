@@ -317,6 +317,7 @@ class Sbsrender():
 			imgPath = optPathDict[channel]
 			fileNode = ls('_'.join([itemName, channel, 'file']))[0]
 			fileNode.fileTextureName.set(imgPath)
+			fileNode.uvTilingMode.set(3 if isUDIM else 0)
 
 
 	def dist(self, outputFormat, outputSize, buildShad, outputDir):
