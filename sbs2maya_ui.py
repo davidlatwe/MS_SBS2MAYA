@@ -44,7 +44,7 @@ def ui_main():
 	text(l= '  - Texture Folder Path')
 
 	rowLayout(nc= 2, adj= 1)
-	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace('sourceImages', q= 1, fre= 1))
+	inputDir_textF = textField(text= workspace(q= 1, rd= 1) + workspace(fileRuleEntry= 'sourceImages'))
 	icBtn_textF_choose = iconTextButton(i= 'fileOpen.png', w= 20, h= 20)
 	setParent('..')
 	
